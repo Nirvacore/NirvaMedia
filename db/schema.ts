@@ -50,3 +50,15 @@ export const solutionConfigs = sqliteTable(
   },
   (table) => [index("idx_solution_configs_created_at").on(table.createdAt)],
 );
+
+export const workspaceEntitlements = sqliteTable("workspace_entitlements", {
+  workspaceId: text("workspace_id").primaryKey(),
+  workspaceName: text("workspace_name").notNull(),
+  solutionConfigId: text("solution_config_id").references(() => solutionConfigs.id, { onDelete: "set null" }),
+  bundleId: text("bundle_id"),
+  moduleIds: text("module_ids", { mode: "json" }).$type<string[]>().notNull(),
+  connectorIds: text("connector_ids", { mode: "json" }).$type<string[]>().notNull(),
+  status: text("status").notNull().default("active"),
+  activatedAt: integer("activated_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

@@ -51,6 +51,8 @@ reused.
 - Six connector families and a recommended global integration order
 - Product Fabric solution builder with five bundles, seven selectable modules,
   six connector families, and persistent saved configurations
+- Workspace runtime entitlements that activate a saved Product Fabric and gate
+  Studio modules, language controls, publishing actions, and channel visibility
 - Original media modules, tests, Studio OS, mobile shell, SDKs, and roadmaps
   preserved under the upstream snapshot
 
@@ -68,9 +70,9 @@ already operating.
 ## Sell separately or together
 
 The product catalog, modular packaging UI, bundle definitions, custom solution
-builder, and saved configurations are implemented. Billing, checkout,
-contracts, customer identity, and enforceable runtime entitlements are not
-implemented yet.
+builder, saved configurations, and workspace-level runtime entitlements are
+implemented. Billing, checkout, contracts, customer identity, multi-workspace
+administration, and payment-linked entitlement lifecycle are not implemented.
 
 ### Standalone modules
 
@@ -123,15 +125,15 @@ formats, limits, and errors.
 
 ## Recommended delivery order
 
-1. Runtime feature-entitlement enforcement for organizations and workspaces.
-2. Connector foundation: encrypted credentials, account registry, job queue,
+1. Connector foundation: encrypted credentials, account registry, job queue,
    webhooks, retries, and audit trail.
-3. Meta Network, YouTube, and TikTok as Global Core.
-4. LINE for Thailand, Japan, and Taiwan.
-5. Regional adapters: Kakao/Naver, Telegram, Snapchat, X, LinkedIn, Pinterest.
-6. Dedicated China stack.
-7. Unified analytics and recommendation feedback loop.
-8. Billing/contract workflow and customer-facing connection onboarding.
+2. Meta Network, YouTube, and TikTok as Global Core.
+3. LINE for Thailand, Japan, and Taiwan.
+4. Regional adapters: Kakao/Naver, Telegram, Snapchat, X, LinkedIn, Pinterest.
+5. Dedicated China stack.
+6. Unified analytics and recommendation feedback loop.
+7. Billing/contract workflow, customer identity, multi-workspace administration,
+   and customer-facing connection onboarding.
 
 ## Recent implementation
 
@@ -141,6 +143,9 @@ formats, limits, and errors.
 - Configurations persist in D1 through `solution_configs`.
 - All bundles explicitly share one Identity, Brand, Asset, Language, Workflow,
   Audit, and Analytics core.
+- 2026-08-03: Added `workspace_entitlements` and `/api/entitlements`.
+- Saving a Product Fabric now activates it for Nirva Workspace. Campaign Studio
+  reads that entitlement and enforces module and connector access at runtime.
 
 ## Product decisions to preserve
 

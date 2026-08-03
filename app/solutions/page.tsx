@@ -24,14 +24,21 @@ export default function SolutionsPage() {
   const [selectedModules, setSelectedModules] = useState<string[]>([...enterpriseBundle.moduleIds]);
   const [selectedConnectors, setSelectedConnectors] = useState<string[]>([...enterpriseBundle.connectorIds]);
   const [savedSolutions, setSavedSolutions] = useState<SavedSolution[]>([]);
+  const [activeSolutionId, setActiveSolutionId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    fetch("/api/solutions")
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((data) => setSavedSolutions(data.solutions ?? []))
-      .catch(() => setMessage("ยังโหลดชุดโซลูชันเดิมไม่ได้"));
+    Promise.all([fetch("/api/solutions"), fetch("/api/entitlements")])
+      .then(async ([solutionsResponse, entitlementResponse]) => {
+        if (!solutionsResponse.ok || !entitlementResponse.ok) throw new Error();
+        return Promise.all([solutionsResponse.json(), entitlementResponse.json()]);
+      })
+      .then(([solutionsData, entitlementData]) => {
+        setSavedSolutions(solutionsData.solutions ?? []);
+        setActiveSolutionId(entitlementData.entitlement?.solutionConfigId ?? null);
+      })
+      .catch(() => setMessage("ยังโหลดชุดโซลูชันหรือสิทธิ์ Workspace เดิมไม่ได้"));
   }, []);
 
   function applyBundle(id: string) {
@@ -78,8 +85,15 @@ export default function SolutionsPage() {
       });
       if (!response.ok) throw new Error();
       const data = await response.json();
+      const activationResponse = await fetch("/api/entitlements", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solutionConfigId: data.solution.id }),
+      });
+      if (!activationResponse.ok) throw new Error();
       setSavedSolutions((current) => [data.solution, ...current].slice(0, 12));
-      setMessage("บันทึก Product Fabric นี้แล้ว");
+      setActiveSolutionId(data.solution.id);
+      setMessage("บันทึกและเปิดใช้ Product Fabric กับ Workspace แล้ว");
     } catch {
       setMessage("บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
@@ -130,11 +144,11 @@ export default function SolutionsPage() {
       <section className="solution-summary">
         <div><span className="section-kicker light">YOUR NIRVA PRODUCT FABRIC</span><input aria-label="ชื่อชุดโซลูชัน" value={solutionName} onChange={(event) => setSolutionName(event.target.value)} /><p>{selectedModules.length} โมดูล เชื่อมกับ {selectedConnectors.length} Connector Families ผ่านแกนกลางเดียว</p></div>
         <div className="summary-chips">{selectedModules.map((id) => <span key={id}>{productModules.find((module) => module.id === id)?.name}</span>)}</div>
-        <button disabled={saving || !solutionName.trim() || selectedModules.length === 0} onClick={saveSolution}>{saving ? "กำลังบันทึก..." : "บันทึกชุดโซลูชัน"}<span>→</span></button>
+        <button disabled={saving || !solutionName.trim() || selectedModules.length === 0} onClick={saveSolution}>{saving ? "กำลังเปิดใช้..." : "บันทึกและเปิดใช้"}<span>→</span></button>
         {message && <small className="solution-message">{message}</small>}
       </section>
 
-      {savedSolutions.length > 0 && <section className="saved-solutions"><div className="solution-heading"><div><span>04</span><h2>ชุดที่บันทึกไว้</h2></div><p>เปิดกลับมาเพิ่มหรือลดโมดูลได้ทันที</p></div><div>{savedSolutions.map((solution) => <button key={solution.id} onClick={() => loadSolution(solution)}><strong>{solution.name}</strong><span>{solution.moduleIds.length} modules · {solution.connectorIds.length} connectors</span><small>{formatDate(solution.createdAt)}</small></button>)}</div></section>}
+      {savedSolutions.length > 0 && <section className="saved-solutions"><div className="solution-heading"><div><span>04</span><h2>ชุดที่บันทึกไว้</h2></div><p>ชุดที่เปิดใช้จะควบคุมสิทธิ์ใน Campaign Studio</p></div><div>{savedSolutions.map((solution) => <button className={activeSolutionId === solution.id ? "active" : ""} key={solution.id} onClick={() => loadSolution(solution)}><strong>{solution.name}</strong><span>{solution.moduleIds.length} modules · {solution.connectorIds.length} connectors</span><small>{activeSolutionId === solution.id ? "● ใช้งานอยู่ใน Workspace" : formatDate(solution.createdAt)}</small></button>)}</div></section>}
 
       <footer className="solution-footer"><a className="brand footer-brand" href="/"><span className="brand-mark"><i /><i /><i /></span><span>Nirva<span>Media</span></span></a><p>Start anywhere. Connect everything. Grow without boundaries.</p><a href="/studio">เปิด Campaign Studio →</a></footer>
     </main>

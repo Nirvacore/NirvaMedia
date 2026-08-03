@@ -44,7 +44,7 @@ test("removes starter preview dependencies and keeps product metadata", async ()
 });
 
 test("persists Campaign Studio work with D1 and versioned migrations", async () => {
-  const [hosting, schema, campaignsRoute, postsRoute, migration, solutionsRoute, solutionsPage, solutionMigration, productCatalog] = await Promise.all([
+  const [hosting, schema, campaignsRoute, postsRoute, migration, solutionsRoute, solutionsPage, solutionMigration, productCatalog, entitlementsRoute, entitlementMigration, studioPage] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/campaigns/route.ts", import.meta.url), "utf8"),
@@ -54,6 +54,9 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
     readFile(new URL("../app/solutions/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0001_far_sunfire.sql", import.meta.url), "utf8"),
     readFile(new URL("../lib/product-catalog.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/entitlements/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0002_clean_colonel_america.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(hosting).d1, "DB");
@@ -71,4 +74,9 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
   assert.match(solutionsPage, /Product Fabric/);
   assert.match(productCatalog, /Enterprise Global/);
   assert.match(solutionMigration, /CREATE TABLE `solution_configs`/);
+  assert.match(schema, /workspaceEntitlements/);
+  assert.match(entitlementsRoute, /export async function PUT/);
+  assert.match(entitlementMigration, /CREATE TABLE `workspace_entitlements`/);
+  assert.match(studioPage, /จัดการสิทธิ์/);
+  assert.match(studioPage, /ต้องมี Publisher/);
 });

@@ -2,8 +2,9 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- vinext client runtime currently duplicates React through next/link */
 
 import { useEffect, useState } from "react";
+import { channelsForConnectors } from "../../lib/product-catalog";
 
-const channelOptions = [
+const allChannelOptions = [
   "Instagram", "Facebook", "WhatsApp Business", "Threads", "YouTube", "TikTok", "LINE OA", "X",
   "LinkedIn", "Telegram", "Pinterest", "Snapchat", "WeChat", "Douyin", "Weibo", "Xiaohongshu",
   "KakaoTalk", "Naver Blog",
@@ -37,6 +38,13 @@ type CampaignSummary = {
   status: string;
   createdAt: string | number;
   posts: StudioPost[];
+};
+
+type WorkspaceEntitlement = {
+  bundleId: string | null;
+  moduleIds: string[];
+  connectorIds: string[];
+  status: string;
 };
 
 const artColors: Record<string, string> = {
@@ -80,15 +88,30 @@ export default function StudioPage() {
   const [generated, setGenerated] = useState(false);
   const [posts, setPosts] = useState<StudioPost[]>([]);
   const [recentCampaigns, setRecentCampaigns] = useState<CampaignSummary[]>([]);
+  const [entitlement, setEntitlement] = useState<WorkspaceEntitlement>({
+    bundleId: "enterprise-global",
+    moduleIds: ["content-studio", "language-engine", "smart-publisher", "market-intelligence", "performance-intelligence", "enterprise-control", "mobile-workspace"],
+    connectorIds: ["meta-network", "google-video", "bytedance-global", "line-ecosystem", "china-dedicated", "regional-plus"],
+    status: "trial",
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
-    fetch("/api/campaigns")
-      .then((response) => response.ok ? response.json() : Promise.reject(new Error("โหลดประวัติไม่สำเร็จ")))
-      .then((data) => {
-        if (active) setRecentCampaigns(data.campaigns ?? []);
+    Promise.all([fetch("/api/campaigns"), fetch("/api/entitlements")])
+      .then(async ([campaignsResponse, entitlementResponse]) => {
+        if (!campaignsResponse.ok || !entitlementResponse.ok) throw new Error("โหลด Workspace ไม่สำเร็จ");
+        return Promise.all([campaignsResponse.json(), entitlementResponse.json()]);
+      })
+      .then(([campaignsData, entitlementData]) => {
+        if (active) {
+          setRecentCampaigns(campaignsData.campaigns ?? []);
+          const nextEntitlement = entitlementData.entitlement as WorkspaceEntitlement;
+          setEntitlement(nextEntitlement);
+          const allowedChannels = channelsForConnectors(nextEntitlement.connectorIds);
+          setChannels((current) => current.filter((channel) => allowedChannels.includes(channel)));
+        }
       })
       .catch(() => {
         if (active) setError("ยังโหลดประวัติแคมเปญไม่ได้ กรุณาลองใหม่อีกครั้ง");
@@ -157,6 +180,10 @@ export default function StudioPage() {
   }
 
   const scheduledCount = posts.filter((post) => post.status === "scheduled").length;
+  const availableChannels = allChannelOptions.filter((channel) => channelsForConnectors(entitlement.connectorIds).includes(channel));
+  const canCreate = entitlement.moduleIds.includes("content-studio");
+  const canLocalize = entitlement.moduleIds.includes("language-engine");
+  const canPublish = entitlement.moduleIds.includes("smart-publisher");
 
   return (
     <main className="studio-app">
@@ -179,6 +206,7 @@ export default function StudioPage() {
           <div><span className="studio-breadcrumb">WORKSPACE / CAMPAIGNS</span><h1>Campaign Studio</h1><p>เปลี่ยนหนึ่งไอเดียให้พร้อมใช้ในทุกช่องทาง</p></div>
           <div className="header-actions"><button aria-label="การแจ้งเตือน">○</button><span className="avatar">JD</span></div>
         </header>
+        <div className="entitlement-strip"><span><i /> {entitlement.status === "active" ? "ACTIVE PRODUCT FABRIC" : "ENTERPRISE TRIAL"}</span><strong>{entitlement.bundleId ?? "Custom Fabric"}</strong><small>{entitlement.moduleIds.length} modules · {entitlement.connectorIds.length} connector families</small><a href="/solutions">จัดการสิทธิ์ →</a></div>
 
         <div className="studio-layout">
           <section className="brief-panel">
@@ -188,18 +216,19 @@ export default function StudioPage() {
             <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); setGenerated(false); }} />
 
             <div className="field-row">
-              <div><label className="field-label" htmlFor="language">ภาษาหลัก</label><select id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{Object.entries(languageNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+              <div><label className="field-label" htmlFor="language">ภาษาหลัก {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{Object.entries(languageNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
               <div><label className="field-label" htmlFor="tone">น้ำเสียง</label><select id="tone" value={tone} onChange={(event) => { setTone(event.target.value); setGenerated(false); }}><option>อบอุ่นและมั่นใจ</option><option>มืออาชีพและกระชับ</option><option>สนุกและเป็นกันเอง</option><option>น่าเชื่อถือและจริงจัง</option></select></div>
             </div>
 
             <span className="field-label">ช่องทาง</span>
             <div className="channel-picker">
-              {channelOptions.map((channel) => <button type="button" key={channel} onClick={() => toggleChannel(channel)} className={channels.includes(channel) ? "selected" : ""}><i>{channels.includes(channel) ? "✓" : "+"}</i>{channel}</button>)}
+              {availableChannels.map((channel) => <button type="button" key={channel} onClick={() => toggleChannel(channel)} className={channels.includes(channel) ? "selected" : ""}><i>{channels.includes(channel) ? "✓" : "+"}</i>{channel}</button>)}
             </div>
+            {availableChannels.length === 0 && <p className="studio-error">แพ็กเกจนี้ยังไม่มี Connector Family กรุณาเพิ่มช่องทางใน Product Fabric</p>}
 
             <div className="brief-insight"><span>✦</span><div><strong>AI understands your brief</strong><p>{brief.length > 80 ? "ข้อมูลพร้อมสำหรับสร้างหลายรูปแบบ" : "เพิ่มรายละเอียดผู้ชมและข้อเสนอเพื่อผลลัพธ์ที่แม่นยำขึ้น"}</p></div><b>{Math.min(98, 62 + Math.floor(brief.length / 4))}%</b></div>
             {error && <p className="studio-error" role="alert">{error}</p>}
-            <button className="generate-button" disabled={saving || !brief.trim() || channels.length === 0} onClick={generateContent}><span>✦</span> {saving ? "กำลังสร้างและบันทึก..." : `สร้างคอนเทนต์ ${channels.length} ช่องทาง`} <b>→</b></button>
+            <button className="generate-button" disabled={!canCreate || saving || !brief.trim() || channels.length === 0} onClick={generateContent}><span>✦</span> {!canCreate ? "ต้องมี AI Content Studio" : saving ? "กำลังสร้างและบันทึก..." : `สร้างคอนเทนต์ ${channels.length} ช่องทาง`} <b>→</b></button>
 
             {recentCampaigns.length > 0 && (
               <div className="recent-campaigns" id="calendar">
@@ -225,7 +254,7 @@ export default function StudioPage() {
                 {posts.map((post) => (
                   <article className="post-card" key={post.id}>
                     <div className={`post-art ${artColors[post.channel] ?? "dark"}`}><span>N</span><small>{post.format}</small></div>
-                    <div className="post-content"><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled"} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : "ตั้งเวลาโพสต์"}</button></div></div>
+                    <div className="post-content"><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
                   </article>
                 ))}
                 {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีร่างคอนเทนต์</h3><p>เลือกช่องทางอย่างน้อยหนึ่งช่องทาง แล้วสร้างแคมเปญใหม่</p></div>}

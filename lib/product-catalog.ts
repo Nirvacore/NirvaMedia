@@ -62,3 +62,16 @@ export const productBundles = [
 
 export const moduleIds = new Set<string>(productModules.map((module) => module.id));
 export const connectorIds = new Set<string>(connectorCatalog.map((connector) => connector.id));
+
+export const connectorChannels: Record<string, string[]> = {
+  "meta-network": ["Instagram", "Facebook", "WhatsApp Business", "Threads"],
+  "google-video": ["YouTube"],
+  "bytedance-global": ["TikTok"],
+  "line-ecosystem": ["LINE OA"],
+  "china-dedicated": ["WeChat", "Douyin", "Weibo", "Xiaohongshu"],
+  "regional-plus": ["X", "LinkedIn", "Telegram", "Pinterest", "Snapchat", "KakaoTalk", "Naver Blog"],
+};
+
+export function channelsForConnectors(ids: string[]) {
+  return Array.from(new Set(ids.flatMap((id) => connectorChannels[id] ?? [])));
+}
