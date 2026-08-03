@@ -39,7 +39,7 @@ export default function Home() {
           <a href="#language">ภาษา</a>
           <a href="#contact">สำหรับองค์กร</a>
         </nav>
-        <a className="nav-cta" href="#demo">ดูตัวอย่าง <span>↗</span></a>
+        <a className="nav-cta" href="/studio">เปิด Studio <span>↗</span></a>
       </header>
 
       <section className="hero" id="top">
@@ -50,7 +50,7 @@ export default function Home() {
           <h1>หนึ่งไอเดีย<br /><em>ไปได้ทุกที่</em></h1>
           <p className="hero-lead">สร้าง ปรับภาษา เผยแพร่ และวิเคราะห์คอนเทนต์ทุกช่องทางด้วย AI บนพื้นที่ทำงานเดียว</p>
           <div className="hero-actions">
-            <a className="button primary" href="#demo">สำรวจ Nirva Media <span>→</span></a>
+            <a className="button primary" href="/studio">เปิด Campaign Studio <span>→</span></a>
             <a className="button ghost" href="#workflow"><span className="play">▶</span> ดูวิธีทำงาน</a>
           </div>
           <div className="hero-proof">

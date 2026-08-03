@@ -9,9 +9,10 @@ for global audiences.
 
 ## Repository map
 
-- `app/` — website pages and styles
+- `app/` — website and Campaign Studio product routes
 - `public/` — production media assets and social preview
 - `docs/` — architecture decisions and source handoff notes
+- `upstream/nirva-ai/` — unchanged snapshot of the original Nirva Media code
 - `.openai/` — deployment configuration
 
 See [`docs/PROJECT_STRUCTURE.md`](docs/PROJECT_STRUCTURE.md) for the boundary

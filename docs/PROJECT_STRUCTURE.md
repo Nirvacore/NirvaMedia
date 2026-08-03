@@ -5,6 +5,7 @@ This repository is the focused home for the Nirva Media web product.
 - `app/` — public website and future product routes
 - `public/` — production media assets
 - `docs/` — product decisions, handoff notes, and delivery documentation
+- `upstream/nirva-ai/` — preserved Nirva Media source from Claude's handoff
 - `.openai/` — hosting configuration
 
 ## Source handoff
@@ -20,6 +21,7 @@ The earlier work contains a mix of executable modules and architecture plans:
 - Roadmaps: advanced ML, multi-region deployment, Kubernetes, and most
   enterprise features.
 
-This repository intentionally does not duplicate the whole `nirva-AI`
-monorepo. New Nirva Media web work belongs here; shared AI platform services
-remain in `nirva-AI` until they have a stable extraction boundary.
+This repository contains a focused snapshot of the Nirva Media implementation,
+not the whole `nirva-AI` monorepo. New Nirva Media product work belongs here;
+shared AI platform services remain in `nirva-AI` until they have a stable
+extraction boundary. See `UPSTREAM_HANDOFF.md` for the continuation policy.
