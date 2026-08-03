@@ -35,3 +35,18 @@ export const campaignPosts = sqliteTable(
     index("idx_campaign_posts_status").on(table.status),
   ],
 );
+
+export const solutionConfigs = sqliteTable(
+  "solution_configs",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    bundleId: text("bundle_id"),
+    moduleIds: text("module_ids", { mode: "json" }).$type<string[]>().notNull(),
+    connectorIds: text("connector_ids", { mode: "json" }).$type<string[]>().notNull(),
+    status: text("status").notNull().default("saved"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("idx_solution_configs_created_at").on(table.createdAt)],
+);

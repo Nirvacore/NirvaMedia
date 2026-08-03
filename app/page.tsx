@@ -71,6 +71,7 @@ export default function Home() {
         <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู" aria-expanded={menuOpen}>☰</button>
         <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="เมนูหลัก">
           <a href="#product">ผลิตภัณฑ์</a>
+          <a href="/solutions">แพ็กเกจ</a>
           <a href="#global">ตลาดทั่วโลก</a>
           <a href="#workflow">วิธีทำงาน</a>
           <a href="#language">ภาษา</a>
@@ -228,7 +229,7 @@ export default function Home() {
         <span className="section-kicker light">BUILD WHAT&apos;S NEXT</span>
         <h2>คอนเทนต์ของคุณ<br /><em>พร้อมไปได้ไกลกว่าเดิม</em></h2>
         <p>เริ่มสร้างระบบสื่อที่เรียนรู้ เติบโต และสื่อสารกับผู้คนทั่วโลกไปพร้อมกับธุรกิจของคุณ</p>
-        <div className="hero-actions centered"><a className="button white" href="mailto:hello@nirva.one">คุยกับทีม Nirva <span>→</span></a><a className="button outline-light" href="#top">กลับด้านบน ↑</a></div>
+        <div className="hero-actions centered"><a className="button white" href="/solutions">จัด Product Fabric <span>→</span></a><a className="button outline-light" href="mailto:hello@nirva.one">คุยกับทีม Nirva</a></div>
       </section>
 
       <footer>

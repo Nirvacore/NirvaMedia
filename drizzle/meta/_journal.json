@@ -8,6 +8,13 @@
       "when": 1785725835287,
       "tag": "0000_giant_captain_britain",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1785733550988,
+      "tag": "0001_far_sunfire",
+      "breakpoints": true
     }
   ]
 }

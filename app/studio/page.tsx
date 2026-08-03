@@ -170,6 +170,7 @@ export default function StudioPage() {
           <a href="#language"><span>文</span> Language Engine</a>
         </nav>
         <div className="workspace-card"><span>NW</span><div><strong>Nirva Workspace</strong><small>3 collaborators</small></div><b>⌄</b></div>
+        <a className="back-site" href="/solutions">∞ Product Fabric</a>
         <a className="back-site" href="/">← กลับเว็บไซต์</a>
       </aside>
 

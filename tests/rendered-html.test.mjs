@@ -44,12 +44,16 @@ test("removes starter preview dependencies and keeps product metadata", async ()
 });
 
 test("persists Campaign Studio work with D1 and versioned migrations", async () => {
-  const [hosting, schema, campaignsRoute, postsRoute, migration] = await Promise.all([
+  const [hosting, schema, campaignsRoute, postsRoute, migration, solutionsRoute, solutionsPage, solutionMigration, productCatalog] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/campaigns/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/posts/[id]/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0000_giant_captain_britain.sql", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/solutions/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/solutions/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0001_far_sunfire.sql", import.meta.url), "utf8"),
+    readFile(new URL("../lib/product-catalog.ts", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(hosting).d1, "DB");
@@ -62,4 +66,9 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
   assert.match(postsRoute, /status: "scheduled"/);
   assert.match(migration, /CREATE TABLE `campaigns`/);
   assert.match(migration, /CREATE TABLE `campaign_posts`/);
+  assert.match(schema, /solutionConfigs/);
+  assert.match(solutionsRoute, /export async function POST/);
+  assert.match(solutionsPage, /Product Fabric/);
+  assert.match(productCatalog, /Enterprise Global/);
+  assert.match(solutionMigration, /CREATE TABLE `solution_configs`/);
 });
