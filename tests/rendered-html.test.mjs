@@ -11,6 +11,9 @@ test("server-renders the Nirva Media product page", async () => {
   assert.match(page, /หนึ่งไอเดีย/);
   assert.match(page, /AI Content Operating System/);
   assert.match(page, /NIRVA LANGUAGE ENGINE/);
+  assert.match(page, /GLOBAL CONNECTION ATLAS/);
+  assert.match(page, /China Stack/);
+  assert.match(page, /KakaoTalk/);
   assert.match(layout, /og\.png/);
   assert.doesNotMatch(page, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
@@ -54,6 +57,8 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
   assert.match(schema, /campaignPosts/);
   assert.match(campaignsRoute, /export async function (GET|POST)/);
   assert.match(campaignsRoute, /db\.batch/);
+  assert.match(campaignsRoute, /Xiaohongshu/);
+  assert.match(campaignsRoute, /WhatsApp Business/);
   assert.match(postsRoute, /status: "scheduled"/);
   assert.match(migration, /CREATE TABLE `campaigns`/);
   assert.match(migration, /CREATE TABLE `campaign_posts`/);

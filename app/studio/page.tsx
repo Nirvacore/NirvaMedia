@@ -3,7 +3,11 @@
 
 import { useEffect, useState } from "react";
 
-const channelOptions = ["Instagram", "Facebook", "LINE OA", "TikTok", "LinkedIn", "YouTube"];
+const channelOptions = [
+  "Instagram", "Facebook", "WhatsApp Business", "Threads", "YouTube", "TikTok", "LINE OA", "X",
+  "LinkedIn", "Telegram", "Pinterest", "Snapchat", "WeChat", "Douyin", "Weibo", "Xiaohongshu",
+  "KakaoTalk", "Naver Blog",
+];
 
 const languageNames: Record<string, string> = {
   th: "ไทย",
@@ -42,6 +46,18 @@ const artColors: Record<string, string> = {
   TikTok: "blue",
   LinkedIn: "dark",
   YouTube: "mint",
+  "WhatsApp Business": "mint",
+  Threads: "dark",
+  X: "dark",
+  Telegram: "blue",
+  Pinterest: "dark",
+  Snapchat: "mint",
+  WeChat: "mint",
+  Douyin: "dark",
+  Weibo: "blue",
+  Xiaohongshu: "dark",
+  KakaoTalk: "mint",
+  "Naver Blog": "mint",
 };
 
 function formatDate(value: string | number) {

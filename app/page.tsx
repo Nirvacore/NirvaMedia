@@ -2,7 +2,42 @@
 
 import { useState } from "react";
 
-const channels = ["Facebook", "Instagram", "LINE OA", "TikTok", "YouTube", "LinkedIn"];
+const channels = ["Facebook", "Instagram", "WhatsApp", "LINE", "YouTube", "TikTok", "WeChat", "Douyin", "X", "LinkedIn", "Telegram", "KakaoTalk"];
+
+const marketRegions = ["เอเชีย", "อเมริกา", "ยุโรป", "ตะวันออกกลาง", "แอฟริกา"];
+
+const priorityMarkets = [
+  { region: "เอเชีย", flag: "🇹🇭", country: "ไทย", platforms: ["LINE", "Facebook", "TikTok", "YouTube", "Instagram"] },
+  { region: "เอเชีย", flag: "🇯🇵", country: "ญี่ปุ่น", platforms: ["LINE", "YouTube", "X", "Instagram", "TikTok"] },
+  { region: "เอเชีย", flag: "🇨🇳", country: "จีน", platforms: ["WeChat", "Douyin", "Weibo", "Xiaohongshu", "Bilibili"] },
+  { region: "เอเชีย", flag: "🇰🇷", country: "เกาหลีใต้", platforms: ["KakaoTalk", "YouTube", "Instagram", "Naver Blog", "TikTok"] },
+  { region: "เอเชีย", flag: "🇮🇳", country: "อินเดีย", platforms: ["WhatsApp", "YouTube", "Instagram", "Facebook", "Telegram"] },
+  { region: "เอเชีย", flag: "🇮🇩", country: "อินโดนีเซีย", platforms: ["WhatsApp", "TikTok", "YouTube", "Instagram", "Facebook"] },
+  { region: "เอเชีย", flag: "🇹🇼", country: "ไต้หวัน", platforms: ["LINE", "YouTube", "Facebook", "Instagram", "TikTok"] },
+  { region: "อเมริกา", flag: "🇺🇸", country: "สหรัฐฯ", platforms: ["YouTube", "Facebook", "Instagram", "TikTok", "LinkedIn"] },
+  { region: "อเมริกา", flag: "🇨🇦", country: "แคนาดา", platforms: ["YouTube", "Facebook", "Instagram", "TikTok", "LinkedIn"] },
+  { region: "อเมริกา", flag: "🇧🇷", country: "บราซิล", platforms: ["WhatsApp", "Instagram", "YouTube", "Facebook", "TikTok"] },
+  { region: "อเมริกา", flag: "🇲🇽", country: "เม็กซิโก", platforms: ["WhatsApp", "Facebook", "YouTube", "Instagram", "TikTok"] },
+  { region: "ยุโรป", flag: "🇬🇧", country: "สหราชอาณาจักร", platforms: ["YouTube", "WhatsApp", "Facebook", "Instagram", "TikTok"] },
+  { region: "ยุโรป", flag: "🇩🇪", country: "เยอรมนี", platforms: ["WhatsApp", "YouTube", "Instagram", "Facebook", "TikTok"] },
+  { region: "ยุโรป", flag: "🇫🇷", country: "ฝรั่งเศส", platforms: ["YouTube", "WhatsApp", "Facebook", "Instagram", "TikTok"] },
+  { region: "ยุโรป", flag: "🇪🇸", country: "สเปน", platforms: ["WhatsApp", "Instagram", "YouTube", "TikTok", "Facebook"] },
+  { region: "ตะวันออกกลาง", flag: "🇦🇪", country: "UAE", platforms: ["WhatsApp", "Instagram", "YouTube", "Facebook", "TikTok"] },
+  { region: "ตะวันออกกลาง", flag: "🇸🇦", country: "ซาอุดีอาระเบีย", platforms: ["WhatsApp", "YouTube", "Snapchat", "Instagram", "TikTok"] },
+  { region: "ตะวันออกกลาง", flag: "🇹🇷", country: "ตุรกี", platforms: ["Instagram", "WhatsApp", "YouTube", "Facebook", "TikTok"] },
+  { region: "แอฟริกา", flag: "🇳🇬", country: "ไนจีเรีย", platforms: ["WhatsApp", "Facebook", "YouTube", "Instagram", "TikTok"] },
+  { region: "แอฟริกา", flag: "🇿🇦", country: "แอฟริกาใต้", platforms: ["WhatsApp", "Facebook", "YouTube", "Instagram", "TikTok"] },
+  { region: "แอฟริกา", flag: "🇪🇬", country: "อียิปต์", platforms: ["Facebook", "WhatsApp", "YouTube", "Instagram", "TikTok"] },
+];
+
+const connectorFamilies = [
+  { name: "Meta Network", platforms: "Facebook · Instagram · WhatsApp Business · Threads", reach: "ใช้ซ้ำได้ 13 ตลาด", action: "เชื่อมก่อน", tone: "mint" },
+  { name: "Google Video", platforms: "YouTube · Shorts", reach: "ใช้ได้ทุกภูมิภาค", action: "เชื่อมก่อน", tone: "blue" },
+  { name: "ByteDance Global", platforms: "TikTok", reach: "ใช้ซ้ำได้ 17 ตลาด", action: "เชื่อมก่อน", tone: "pink" },
+  { name: "LINE Ecosystem", platforms: "LINE OA · Messaging · Broadcast", reach: "ไทย · ญี่ปุ่น · ไต้หวัน", action: "เชื่อมภูมิภาค", tone: "green" },
+  { name: "China Stack", platforms: "WeChat · Douyin · Weibo · Xiaohongshu", reach: "ต้องแยกบัญชีในจีน", action: "ชุดเฉพาะจีน", tone: "red" },
+  { name: "Regional Plus", platforms: "Kakao · Naver · Telegram · Snapchat · X · LinkedIn", reach: "เติมช่องว่างรายตลาด", action: "เชื่อมตามลำดับ", tone: "dark" },
+];
 
 const features = [
   { icon: "✦", title: "AI Content Studio", text: "เปลี่ยนไอเดียเดียวให้เป็นข้อความ ภาพ วิดีโอ เสียง และซับไตเติลที่พร้อมใช้" },
@@ -22,6 +57,7 @@ const flow = [
 
 export default function Home() {
   const [activeChannel, setActiveChannel] = useState("Instagram");
+  const [activeRegion, setActiveRegion] = useState("เอเชีย");
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -35,6 +71,7 @@ export default function Home() {
         <button className="menu-button" onClick={() => setMenuOpen(!menuOpen)} aria-label="เปิดเมนู" aria-expanded={menuOpen}>☰</button>
         <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="เมนูหลัก">
           <a href="#product">ผลิตภัณฑ์</a>
+          <a href="#global">ตลาดทั่วโลก</a>
           <a href="#workflow">วิธีทำงาน</a>
           <a href="#language">ภาษา</a>
           <a href="#contact">สำหรับองค์กร</a>
@@ -55,7 +92,7 @@ export default function Home() {
           </div>
           <div className="hero-proof">
             <div><strong>100+</strong><span>ภาษาและบริบท</span></div>
-            <div><strong>15+</strong><span>ช่องทางเผยแพร่</span></div>
+            <div><strong>30+</strong><span>ช่องทางเผยแพร่</span></div>
             <div><strong>1</strong><span>พื้นที่ทำงานเดียว</span></div>
           </div>
         </div>
@@ -105,6 +142,41 @@ export default function Home() {
       <section className="channel-strip" aria-label="ช่องทางที่รองรับ">
         <span>เผยแพร่จากที่เดียวไปยัง</span>
         <div>{channels.map((channel) => <b key={channel}>{channel}</b>)}</div>
+      </section>
+
+      <section className="global-atlas section" id="global">
+        <div className="section-heading atlas-heading">
+          <div><span className="section-kicker">GLOBAL CONNECTION ATLAS</span><h2>หนึ่งระบบเชื่อมต่อ<br /><em>ไปได้ครบรอบโลก</em></h2></div>
+          <p>เลือกตลาดแล้วดู 5 ช่องทางที่ควรเตรียมก่อน โดยจัดลำดับจากการเข้าถึงผู้ชม ความเหมาะกับแบรนด์ และความพร้อมของระบบเผยแพร่</p>
+        </div>
+
+        <div className="region-tabs" role="tablist" aria-label="เลือกภูมิภาค">
+          {marketRegions.map((region) => <button key={region} role="tab" aria-selected={activeRegion === region} className={activeRegion === region ? "active" : ""} onClick={() => setActiveRegion(region)}>{region}</button>)}
+        </div>
+
+        <div className="market-grid">
+          {priorityMarkets.filter((market) => market.region === activeRegion).map((market) => (
+            <article className="market-card" key={market.country}>
+              <div className="market-title"><span>{market.flag}</span><div><small>PRIORITY MARKET</small><h3>{market.country}</h3></div></div>
+              <ol>{market.platforms.map((platform, index) => <li key={platform}><span>{index + 1}</span><strong>{platform}</strong></li>)}</ol>
+            </article>
+          ))}
+        </div>
+
+        <div className="connector-section">
+          <div className="connector-intro"><span className="section-kicker">CONNECT ONCE, EXPAND SMARTER</span><h3>อันไหนเหมือนกัน<br />รวมไปทางเดียวกัน</h3><p>เราแบ่งเป็น Connector Family เพื่อใช้ระบบสิทธิ์ ไฟล์ สถานะ และข้อมูลวิเคราะห์ร่วมกัน ลดการสร้างงานซ้ำ แต่ยังแยกแพลตฟอร์มที่มีกฎเฉพาะประเทศอย่างถูกต้อง</p></div>
+          <div className="connector-grid">
+            {connectorFamilies.map((family) => <article className={`connector-card ${family.tone}`} key={family.name}><div><span>{family.action}</span><small>{family.reach}</small></div><h4>{family.name}</h4><p>{family.platforms}</p></article>)}
+          </div>
+        </div>
+
+        <div className="global-plan">
+          <strong>แผนเชื่อมที่คุ้มที่สุด</strong>
+          <div><span>01</span><p><b>Global Core</b>Meta + YouTube + TikTok ครอบคลุมตลาดส่วนใหญ่</p></div>
+          <div><span>02</span><p><b>Asia Messaging</b>เพิ่ม LINE สำหรับไทย ญี่ปุ่น ไต้หวัน และ Kakao สำหรับเกาหลี</p></div>
+          <div><span>03</span><p><b>China Dedicated</b>แยก WeChat, Douyin, Weibo และ Xiaohongshu เป็นชุดจีน</p></div>
+        </div>
+        <p className="atlas-note">Nirva Priority Map 2026 เป็นคำแนะนำเชิงกลยุทธ์ ไม่ใช่อันดับจำนวนผู้ใช้เพียงอย่างเดียว · อ้างอิงแนวโน้มจาก <a href="https://datareportal.com/reports/digital-2025-global-overview-report" target="_blank" rel="noreferrer">DataReportal</a> และข้อมูลการเชื่อมต่อจากเอกสารของแต่ละแพลตฟอร์ม</p>
       </section>
 
       <section className="section features-section" id="product">
