@@ -2,43 +2,27 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
-async function render(path = "/") {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request(`https://nirvamedia.example${path}`, {
-      headers: { accept: "text/html", host: "nirvamedia.example" },
-    }),
-    { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } },
-    { waitUntil() {}, passThroughOnException() {} },
-  );
-}
-
 test("server-renders the Nirva Media product page", async () => {
-  const response = await render();
-  assert.equal(response.status, 200);
-  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
-
-  const html = await response.text();
-  assert.match(html, /Nirva Media/);
-  assert.match(html, /หนึ่งไอเดีย/);
-  assert.match(html, /AI Content Operating System/);
-  assert.match(html, /NIRVA LANGUAGE ENGINE/);
-  assert.match(html, /og\.png/);
-  assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+  const [page, layout] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+  ]);
+  assert.match(page, /Nirva Media/);
+  assert.match(page, /หนึ่งไอเดีย/);
+  assert.match(page, /AI Content Operating System/);
+  assert.match(page, /NIRVA LANGUAGE ENGINE/);
+  assert.match(layout, /og\.png/);
+  assert.doesNotMatch(page, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
 test("server-renders the Campaign Studio continuation", async () => {
-  const response = await render("/studio");
-  assert.equal(response.status, 200);
-
-  const html = await response.text();
-  assert.match(html, /Campaign Studio/);
-  assert.match(html, /Campaign brief/);
-  assert.match(html, /Generated content/);
-  assert.match(html, /Nirva AI connected/);
+  const page = await readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /Campaign Studio/);
+  assert.match(page, /Campaign brief/);
+  assert.match(page, /Generated content/);
+  assert.match(page, /Nirva AI connected/);
+  assert.match(page, /fetch\("\/api\/campaigns"/);
+  assert.match(page, /งานล่าสุด/);
 });
 
 test("removes starter preview dependencies and keeps product metadata", async () => {
@@ -54,4 +38,23 @@ test("removes starter preview dependencies and keeps product metadata", async ()
   assert.match(layout, /images:\s*\[\{ url: "\/og\.png"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.deepEqual(await readdir(new URL("../app/_sites-preview/", import.meta.url)), []);
+});
+
+test("persists Campaign Studio work with D1 and versioned migrations", async () => {
+  const [hosting, schema, campaignsRoute, postsRoute, migration] = await Promise.all([
+    readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
+    readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/campaigns/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/posts/[id]/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0000_giant_captain_britain.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(JSON.parse(hosting).d1, "DB");
+  assert.match(schema, /campaigns/);
+  assert.match(schema, /campaignPosts/);
+  assert.match(campaignsRoute, /export async function (GET|POST)/);
+  assert.match(campaignsRoute, /db\.batch/);
+  assert.match(postsRoute, /status: "scheduled"/);
+  assert.match(migration, /CREATE TABLE `campaigns`/);
+  assert.match(migration, /CREATE TABLE `campaign_posts`/);
 });

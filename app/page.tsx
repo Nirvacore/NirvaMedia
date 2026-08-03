@@ -153,7 +153,7 @@ export default function Home() {
       </section>
 
       <section className="final-cta" id="contact">
-        <span className="section-kicker light">BUILD WHAT'S NEXT</span>
+        <span className="section-kicker light">BUILD WHAT&apos;S NEXT</span>
         <h2>คอนเทนต์ของคุณ<br /><em>พร้อมไปได้ไกลกว่าเดิม</em></h2>
         <p>เริ่มสร้างระบบสื่อที่เรียนรู้ เติบโต และสื่อสารกับผู้คนทั่วโลกไปพร้อมกับธุรกิจของคุณ</p>
         <div className="hero-actions centered"><a className="button white" href="mailto:hello@nirva.one">คุยกับทีม Nirva <span>→</span></a><a className="button outline-light" href="#top">กลับด้านบน ↑</a></div>

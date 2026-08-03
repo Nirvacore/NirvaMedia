@@ -1,6 +1,7 @@
 "use client";
+/* eslint-disable @next/next/no-html-link-for-pages -- vinext client runtime currently duplicates React through next/link */
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const channelOptions = ["Instagram", "Facebook", "LINE OA", "TikTok", "LinkedIn", "YouTube"];
 
@@ -11,40 +12,73 @@ const languageNames: Record<string, string> = {
   zh: "中文",
 };
 
+type StudioPost = {
+  id: string;
+  campaignId: string;
+  channel: string;
+  format: string;
+  title: string;
+  body: string;
+  scheduledAt: string | null;
+  status: string;
+  createdAt: string | number;
+};
+
+type CampaignSummary = {
+  id: string;
+  brief: string;
+  language: string;
+  tone: string;
+  channels: string[];
+  status: string;
+  createdAt: string | number;
+  posts: StudioPost[];
+};
+
+const artColors: Record<string, string> = {
+  Instagram: "mint",
+  Facebook: "blue",
+  "LINE OA": "dark",
+  TikTok: "blue",
+  LinkedIn: "dark",
+  YouTube: "mint",
+};
+
+function formatDate(value: string | number) {
+  return new Intl.DateTimeFormat("th-TH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Bangkok",
+  }).format(new Date(value));
+}
+
+function tomorrowIso() {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+}
+
 export default function StudioPage() {
   const [channels, setChannels] = useState(["Instagram", "Facebook", "LINE OA"]);
   const [language, setLanguage] = useState("th");
   const [tone, setTone] = useState("อบอุ่นและมั่นใจ");
   const [brief, setBrief] = useState("เปิดตัว Nirva Media ให้ทีมการตลาดไทยเห็นว่าหนึ่งไอเดียสามารถไปได้ทุกช่องทาง");
   const [generated, setGenerated] = useState(false);
-  const [scheduled, setScheduled] = useState<string[]>([]);
+  const [posts, setPosts] = useState<StudioPost[]>([]);
+  const [recentCampaigns, setRecentCampaigns] = useState<CampaignSummary[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
-  const posts = useMemo(() => [
-    {
-      channel: "Instagram",
-      format: "Carousel · 4:5",
-      title: "หนึ่งไอเดีย ไปได้ทุกที่",
-      body: `เปลี่ยนไอเดียเดียวให้เป็นคอนเทนต์ครบทุกช่องทาง ด้วยน้ำเสียงแบบ${tone} และพร้อมใช้งานในภาษา${languageNames[language]}`,
-      time: "วันนี้ 18:30",
-      color: "mint",
-    },
-    {
-      channel: "Facebook",
-      format: "Feed post · 1:1",
-      title: "ทีมของคุณไม่ควรเริ่มใหม่ทุกแพลตฟอร์ม",
-      body: "Nirva Media ช่วยสร้าง ปรับภาษา ตั้งเวลา และเรียนรู้จากผลลัพธ์ทั้งหมดในพื้นที่เดียว",
-      time: "พรุ่งนี้ 09:00",
-      color: "blue",
-    },
-    {
-      channel: "LINE OA",
-      format: "Broadcast · Card",
-      title: "พบกับ Content OS สำหรับทีมไทย",
-      body: "สร้างครั้งเดียว ปรับให้เข้ากับผู้ชมแต่ละกลุ่ม และส่งต่อได้ทั่วโลก",
-      time: "พรุ่งนี้ 12:00",
-      color: "dark",
-    },
-  ].filter((post) => channels.includes(post.channel)), [channels, language, tone]);
+  useEffect(() => {
+    let active = true;
+    fetch("/api/campaigns")
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error("โหลดประวัติไม่สำเร็จ")))
+      .then((data) => {
+        if (active) setRecentCampaigns(data.campaigns ?? []);
+      })
+      .catch(() => {
+        if (active) setError("ยังโหลดประวัติแคมเปญไม่ได้ กรุณาลองใหม่อีกครั้ง");
+      });
+    return () => { active = false; };
+  }, []);
 
   function toggleChannel(channel: string) {
     setGenerated(false);
@@ -53,9 +87,60 @@ export default function StudioPage() {
       : [...current, channel]);
   }
 
-  function schedulePost(channel: string) {
-    setScheduled((current) => current.includes(channel) ? current : [...current, channel]);
+  async function generateContent() {
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/campaigns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brief, language, tone, channels }),
+      });
+      if (!response.ok) throw new Error("บันทึกแคมเปญไม่สำเร็จ");
+      const data = await response.json();
+      const campaign = data.campaign as CampaignSummary;
+      setPosts(campaign.posts);
+      setGenerated(true);
+      setRecentCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)].slice(0, 8));
+    } catch {
+      setError("สร้างและบันทึกคอนเทนต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    } finally {
+      setSaving(false);
+    }
   }
+
+  function loadCampaign(campaign: CampaignSummary) {
+    setBrief(campaign.brief);
+    setLanguage(campaign.language);
+    setTone(campaign.tone);
+    setChannels(campaign.channels);
+    setPosts(campaign.posts);
+    setGenerated(true);
+    setError("");
+  }
+
+  async function schedulePost(post: StudioPost) {
+    setError("");
+    const scheduledAt = tomorrowIso();
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduledAt }),
+      });
+      if (!response.ok) throw new Error("ตั้งเวลาไม่สำเร็จ");
+      const data = await response.json();
+      setPosts((current) => current.map((item) => item.id === post.id ? data.post : item));
+      setRecentCampaigns((current) => current.map((campaign) => ({
+        ...campaign,
+        posts: campaign.posts.map((item) => item.id === post.id ? data.post : item),
+      })));
+    } catch {
+      setError("ตั้งเวลาโพสต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+    }
+  }
+
+  const scheduledCount = posts.filter((post) => post.status === "scheduled").length;
 
   return (
     <main className="studio-app">
@@ -80,7 +165,7 @@ export default function StudioPage() {
 
         <div className="studio-layout">
           <section className="brief-panel">
-            <div className="panel-heading"><div><span className="step-pill">01</span><h2>Campaign brief</h2></div><span className="autosave"><i /> บันทึกแล้ว</span></div>
+            <div className="panel-heading"><div><span className="step-pill">01</span><h2>Campaign brief</h2></div><span className="autosave"><i /> {saving ? "กำลังบันทึก" : generated ? "บันทึกแล้ว" : "พร้อมบันทึก"}</span></div>
 
             <label className="field-label" htmlFor="brief">เป้าหมายแคมเปญ</label>
             <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); setGenerated(false); }} />
@@ -92,11 +177,25 @@ export default function StudioPage() {
 
             <span className="field-label">ช่องทาง</span>
             <div className="channel-picker">
-              {channelOptions.map((channel) => <button key={channel} onClick={() => toggleChannel(channel)} className={channels.includes(channel) ? "selected" : ""}><i>{channels.includes(channel) ? "✓" : "+"}</i>{channel}</button>)}
+              {channelOptions.map((channel) => <button type="button" key={channel} onClick={() => toggleChannel(channel)} className={channels.includes(channel) ? "selected" : ""}><i>{channels.includes(channel) ? "✓" : "+"}</i>{channel}</button>)}
             </div>
 
             <div className="brief-insight"><span>✦</span><div><strong>AI understands your brief</strong><p>{brief.length > 80 ? "ข้อมูลพร้อมสำหรับสร้างหลายรูปแบบ" : "เพิ่มรายละเอียดผู้ชมและข้อเสนอเพื่อผลลัพธ์ที่แม่นยำขึ้น"}</p></div><b>{Math.min(98, 62 + Math.floor(brief.length / 4))}%</b></div>
-            <button className="generate-button" disabled={!brief.trim() || channels.length === 0} onClick={() => setGenerated(true)}><span>✦</span> สร้างคอนเทนต์ {channels.length} ช่องทาง <b>→</b></button>
+            {error && <p className="studio-error" role="alert">{error}</p>}
+            <button className="generate-button" disabled={saving || !brief.trim() || channels.length === 0} onClick={generateContent}><span>✦</span> {saving ? "กำลังสร้างและบันทึก..." : `สร้างคอนเทนต์ ${channels.length} ช่องทาง`} <b>→</b></button>
+
+            {recentCampaigns.length > 0 && (
+              <div className="recent-campaigns" id="calendar">
+                <div className="recent-campaign-heading"><strong>งานล่าสุด</strong><span>{recentCampaigns.length} แคมเปญ</span></div>
+                <div className="recent-campaign-list">
+                  {recentCampaigns.slice(0, 4).map((campaign) => (
+                    <button type="button" key={campaign.id} onClick={() => loadCampaign(campaign)}>
+                      <span>{campaign.brief}</span><small>{campaign.posts.length} ร่าง · {formatDate(campaign.createdAt)}</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="output-panel" id="content">
@@ -107,18 +206,18 @@ export default function StudioPage() {
             ) : (
               <div className="post-list">
                 {posts.map((post) => (
-                  <article className="post-card" key={post.channel}>
-                    <div className={`post-art ${post.color}`}><span>N</span><small>{post.format}</small></div>
-                    <div className="post-content"><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.time}</span><button className={scheduled.includes(post.channel) ? "scheduled" : ""} onClick={() => schedulePost(post.channel)}>{scheduled.includes(post.channel) ? "✓ ตั้งเวลาแล้ว" : "ตั้งเวลาโพสต์"}</button></div></div>
+                  <article className="post-card" key={post.id}>
+                    <div className={`post-art ${artColors[post.channel] ?? "dark"}`}><span>N</span><small>{post.format}</small></div>
+                    <div className="post-content"><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled"} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : "ตั้งเวลาโพสต์"}</button></div></div>
                   </article>
                 ))}
-                {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีช่องทางที่รองรับในตัวอย่างนี้</h3><p>เลือก Instagram, Facebook หรือ LINE OA เพื่อสร้างร่างคอนเทนต์</p></div>}
+                {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีร่างคอนเทนต์</h3><p>เลือกช่องทางอย่างน้อยหนึ่งช่องทาง แล้วสร้างแคมเปญใหม่</p></div>}
               </div>
             )}
           </section>
         </div>
 
-        <footer className="studio-status"><span><i /> Nirva AI connected</span><span>Language: {languageNames[language]}</span><span>{scheduled.length} scheduled</span></footer>
+        <footer className="studio-status"><span><i /> Nirva AI connected</span><span>Language: {languageNames[language]}</span><span>{scheduledCount} scheduled</span></footer>
       </section>
     </main>
   );
