@@ -72,6 +72,7 @@ export default function Home() {
         <nav className={menuOpen ? "nav-links open" : "nav-links"} aria-label="เมนูหลัก">
           <a href="#product">ผลิตภัณฑ์</a>
           <a href="/solutions">แพ็กเกจ</a>
+          <a href="/connections">การเชื่อมต่อ</a>
           <a href="#global">ตลาดทั่วโลก</a>
           <a href="#workflow">วิธีทำงาน</a>
           <a href="#language">ภาษา</a>

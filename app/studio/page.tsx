@@ -174,6 +174,19 @@ export default function StudioPage() {
         ...campaign,
         posts: campaign.posts.map((item) => item.id === post.id ? data.post : item),
       })));
+      const queueResponse = await fetch("/api/publish-jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id, channel: post.channel, scheduledAt }),
+      });
+      if (queueResponse.ok) {
+        const queueData = await queueResponse.json();
+        if (queueData.job?.status === "blocked_auth") {
+          setError("บันทึกเวลาแล้ว แต่ยังรอเชื่อมบัญชีจริงใน Connection Center ก่อนส่งเผยแพร่");
+        }
+      } else {
+        setError("บันทึกเวลาแล้ว แต่ยังเพิ่มงานเข้าคิวเผยแพร่ไม่ได้ กรุณาลองจาก Connection Center");
+      }
     } catch {
       setError("ตั้งเวลาโพสต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     }
@@ -197,6 +210,7 @@ export default function StudioPage() {
           <a href="#language"><span>文</span> Language Engine</a>
         </nav>
         <div className="workspace-card"><span>NW</span><div><strong>Nirva Workspace</strong><small>3 collaborators</small></div><b>⌄</b></div>
+        <a className="back-site" href="/connections">◎ Connection Center</a>
         <a className="back-site" href="/solutions">∞ Product Fabric</a>
         <a className="back-site" href="/">← กลับเว็บไซต์</a>
       </aside>

@@ -25,6 +25,9 @@ from roadmaps so project status is not inferred from documentation alone.
 
 - A focused Nirva Media public website
 - A new `/studio` product route built on the preserved product model
+- A modular `/solutions` Product Fabric with workspace entitlements
+- A `/connections` control center with persistent connector setup, publishing
+  queue, and audit records; live OAuth and platform adapters remain next work
 - Clear repository boundaries and deployment configuration
 
 All future extraction from the upstream snapshot should happen through an

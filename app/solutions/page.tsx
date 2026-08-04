@@ -105,7 +105,7 @@ export default function SolutionsPage() {
     <main className="solutions-page">
       <header className="solution-nav">
         <a className="brand" href="/"><span className="brand-mark"><i /><i /><i /></span><span>Nirva<span>Media</span></span></a>
-        <nav><a href="/">เว็บไซต์</a><a href="/studio">Campaign Studio</a><a className="active" href="/solutions">Product Fabric</a></nav>
+        <nav><a href="/">เว็บไซต์</a><a href="/studio">Campaign Studio</a><a className="active" href="/solutions">Product Fabric</a><a href="/connections">Connection Center</a></nav>
         <span className="fabric-status"><i /> ONE CONNECTED CORE</span>
       </header>
 

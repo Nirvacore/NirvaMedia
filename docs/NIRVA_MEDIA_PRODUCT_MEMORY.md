@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-08-03
+updated: 2026-08-04
 status: active-development
 tags:
   - nirva
@@ -30,6 +30,7 @@ global platforms from one workspace.
 - Local product root: `/Users/machd/Documents/Codex/NirvaMedia-site`
 - Live private site: `https://nirva-media.jidlada-w.chatgpt.site`
 - Campaign Studio: `https://nirva-media.jidlada-w.chatgpt.site/studio`
+- Connection Center: `https://nirva-media.jidlada-w.chatgpt.site/connections`
 - Original Claude repository: `https://github.com/Nirvacore/nirva-AI`
 - Preserved Claude snapshot: `upstream/nirva-ai/`
 - Upstream source branch: `claude/nirva-media-nle-vision-h0v1z0`
@@ -53,15 +54,21 @@ reused.
   six connector families, and persistent saved configurations
 - Workspace runtime entitlements that activate a saved Product Fabric and gate
   Studio modules, language controls, publishing actions, and channel visibility
+- Connection Center with six entitlement-aware connector families, persistent
+  account setup records, a publish queue, and connector audit events
+- Campaign Studio scheduling now creates a publish job and truthfully blocks it
+  for authorization until a matching external account is connected
 - Original media modules, tests, Studio OS, mobile shell, SDKs, and roadmaps
   preserved under the upstream snapshot
 
 ## Important truth boundary
 
-The website, persistent Campaign Studio, market map, draft generation, and
-scheduling records are implemented. Live third-party account authorization and
-publishing are not yet connected. Platform OAuth, app review, tokens, webhooks,
-publishing calls, and analytics ingestion remain implementation work.
+The website, persistent Campaign Studio, market map, draft generation,
+scheduling records, connector account registry, publishing queue, and connector
+audit events are implemented. Live third-party account authorization and
+publishing are not yet connected. Platform OAuth, credential vault, app review,
+tokens, webhooks, publishing calls, retries, and analytics ingestion remain
+implementation work.
 
 Roadmap documents for ML, multi-region infrastructure, Kubernetes, and several
 enterprise capabilities are plans, not proof that production infrastructure is
@@ -125,8 +132,9 @@ formats, limits, and errors.
 
 ## Recommended delivery order
 
-1. Connector foundation: encrypted credentials, account registry, job queue,
-   webhooks, retries, and audit trail.
+1. Complete the connector foundation: account registry, job queue, entitlement
+   enforcement, and audit trail are implemented; encrypted credentials, OAuth,
+   webhooks, rate limits, and retries are next.
 2. Meta Network, YouTube, and TikTok as Global Core.
 3. LINE for Thailand, Japan, and Taiwan.
 4. Regional adapters: Kakao/Naver, Telegram, Snapchat, X, LinkedIn, Pinterest.
@@ -137,6 +145,13 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-08-04: Added `/connections` Connection Center.
+- Added D1 tables for `connector_accounts`, `publish_jobs`, and
+  `connector_events`, with workspace and scheduling indexes.
+- Connector setup records never accept tokens or secrets. The current setup
+  state stops at `setup_required` and clearly labels OAuth as the next step.
+- Studio scheduling adds entitlement-checked publish jobs. Jobs remain
+  `blocked_auth` until a matching account reaches `connected`.
 - 2026-08-03: Added `/solutions` Product Fabric builder.
 - Customers can start from Starter, Growth, Asia Expansion, China Market, or
   Enterprise Global, then add or remove modules and connector families.

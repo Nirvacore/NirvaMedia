@@ -43,8 +43,8 @@ test("removes starter preview dependencies and keeps product metadata", async ()
   assert.deepEqual(await readdir(new URL("../app/_sites-preview/", import.meta.url)), []);
 });
 
-test("persists Campaign Studio work with D1 and versioned migrations", async () => {
-  const [hosting, schema, campaignsRoute, postsRoute, migration, solutionsRoute, solutionsPage, solutionMigration, productCatalog, entitlementsRoute, entitlementMigration, studioPage] = await Promise.all([
+test("persists Studio, Product Fabric, and connector workflows with D1", async () => {
+  const [hosting, schema, campaignsRoute, postsRoute, migration, solutionsRoute, solutionsPage, solutionMigration, productCatalog, entitlementsRoute, entitlementMigration, studioPage, connectionsRoute, publishJobsRoute, connectionsPage, connectorMigration] = await Promise.all([
     readFile(new URL("../.openai/hosting.json", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/campaigns/route.ts", import.meta.url), "utf8"),
@@ -57,6 +57,10 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
     readFile(new URL("../app/api/entitlements/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../drizzle/0002_clean_colonel_america.sql", import.meta.url), "utf8"),
     readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/connections/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/publish-jobs/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/connections/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0003_watery_living_lightning.sql", import.meta.url), "utf8"),
   ]);
 
   assert.equal(JSON.parse(hosting).d1, "DB");
@@ -79,4 +83,18 @@ test("persists Campaign Studio work with D1 and versioned migrations", async () 
   assert.match(entitlementMigration, /CREATE TABLE `workspace_entitlements`/);
   assert.match(studioPage, /จัดการสิทธิ์/);
   assert.match(studioPage, /ต้องมี Publisher/);
+  assert.match(studioPage, /fetch\("\/api\/publish-jobs"/);
+  assert.match(schema, /connectorAccounts/);
+  assert.match(schema, /publishJobs/);
+  assert.match(schema, /connectorEvents/);
+  assert.match(connectionsRoute, /credentials are not accepted/);
+  assert.match(connectionsRoute, /workspaceEntitlements/);
+  assert.match(publishJobsRoute, /blocked_auth/);
+  assert.match(publishJobsRoute, /entitledConnectorIds/);
+  assert.match(connectionsPage, /CONNECTION CENTER/);
+  assert.match(connectionsPage, /6 Connector Families/);
+  assert.match(connectionsPage, /ยังไม่มีการขอ Token/);
+  assert.match(connectorMigration, /CREATE TABLE `connector_accounts`/);
+  assert.match(connectorMigration, /CREATE TABLE `publish_jobs`/);
+  assert.match(connectorMigration, /CREATE TABLE `connector_events`/);
 });

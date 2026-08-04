@@ -1,5 +1,8 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+export type ConnectorAccountStatus = "setup_required" | "connected" | "error";
+export type PublishJobStatus = "queued" | "blocked_auth" | "published" | "failed";
+
 export const campaigns = sqliteTable(
   "campaigns",
   {
@@ -62,3 +65,62 @@ export const workspaceEntitlements = sqliteTable("workspace_entitlements", {
   activatedAt: integer("activated_at", { mode: "timestamp_ms" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const connectorAccounts = sqliteTable(
+  "connector_accounts",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectorId: text("connector_id").notNull(),
+    accountName: text("account_name").notNull(),
+    status: text("status").$type<ConnectorAccountStatus>().notNull().default("setup_required"),
+    externalAccountId: text("external_account_id"),
+    scopes: text("scopes", { mode: "json" }).$type<string[]>().notNull(),
+    lastSyncedAt: integer("last_synced_at", { mode: "timestamp_ms" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("idx_connector_accounts_workspace_connector").on(table.workspaceId, table.connectorId),
+  ],
+);
+
+export const publishJobs = sqliteTable(
+  "publish_jobs",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    postId: text("post_id"),
+    connectorAccountId: text("connector_account_id").references(() => connectorAccounts.id, {
+      onDelete: "set null",
+    }),
+    channel: text("channel").notNull(),
+    status: text("status").$type<PublishJobStatus>().notNull().default("queued"),
+    scheduledAt: integer("scheduled_at", { mode: "timestamp_ms" }),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("idx_publish_jobs_workspace_status").on(table.workspaceId, table.status),
+    index("idx_publish_jobs_scheduled_at").on(table.scheduledAt),
+  ],
+);
+
+export const connectorEvents = sqliteTable(
+  "connector_events",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    connectorAccountId: text("connector_account_id").references(() => connectorAccounts.id, {
+      onDelete: "set null",
+    }),
+    eventType: text("event_type").notNull(),
+    payload: text("payload", { mode: "json" }).$type<Record<string, unknown>>().notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("idx_connector_events_workspace_created_at").on(table.workspaceId, table.createdAt),
+  ],
+);
