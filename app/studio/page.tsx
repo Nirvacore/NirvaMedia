@@ -3,19 +3,13 @@
 
 import { useEffect, useState } from "react";
 import { channelsForConnectors } from "../../lib/product-catalog";
+import { getNirvaLanguage, NIRVA_LANGUAGE_COUNT, NIRVA_LANGUAGES } from "../../lib/nle/languages";
 
 const allChannelOptions = [
   "Instagram", "Facebook", "WhatsApp Business", "Threads", "YouTube", "TikTok", "LINE OA", "X",
   "LinkedIn", "Telegram", "Pinterest", "Snapchat", "WeChat", "Douyin", "Weibo", "Xiaohongshu",
   "KakaoTalk", "Naver Blog",
 ];
-
-const languageNames: Record<string, string> = {
-  th: "ไทย",
-  en: "English",
-  ja: "日本語",
-  zh: "中文",
-};
 
 type StudioPost = {
   id: string;
@@ -197,6 +191,7 @@ export default function StudioPage() {
   const canCreate = entitlement.moduleIds.includes("content-studio");
   const canLocalize = entitlement.moduleIds.includes("language-engine");
   const canPublish = entitlement.moduleIds.includes("smart-publisher");
+  const selectedLanguage = getNirvaLanguage(language) ?? NIRVA_LANGUAGES[0];
 
   return (
     <main className="studio-app">
@@ -230,7 +225,7 @@ export default function StudioPage() {
             <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); setGenerated(false); }} />
 
             <div className="field-row">
-              <div><label className="field-label" htmlFor="language">ภาษาหลัก {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{Object.entries(languageNames).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
+              <div><label className="field-label" htmlFor="language">ภาษาหลัก · NLE {NIRVA_LANGUAGE_COUNT} ภาษา {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}</select></div>
               <div><label className="field-label" htmlFor="tone">น้ำเสียง</label><select id="tone" value={tone} onChange={(event) => { setTone(event.target.value); setGenerated(false); }}><option>อบอุ่นและมั่นใจ</option><option>มืออาชีพและกระชับ</option><option>สนุกและเป็นกันเอง</option><option>น่าเชื่อถือและจริงจัง</option></select></div>
             </div>
 
@@ -240,7 +235,7 @@ export default function StudioPage() {
             </div>
             {availableChannels.length === 0 && <p className="studio-error">แพ็กเกจนี้ยังไม่มี Connector Family กรุณาเพิ่มช่องทางใน Product Fabric</p>}
 
-            <div className="brief-insight"><span>✦</span><div><strong>AI understands your brief</strong><p>{brief.length > 80 ? "ข้อมูลพร้อมสำหรับสร้างหลายรูปแบบ" : "เพิ่มรายละเอียดผู้ชมและข้อเสนอเพื่อผลลัพธ์ที่แม่นยำขึ้น"}</p></div><b>{Math.min(98, 62 + Math.floor(brief.length / 4))}%</b></div>
+            <div className="brief-insight"><span>✦</span><div><strong>Brief readiness</strong><p>{brief.length > 80 ? "ข้อมูลพร้อมสำหรับสร้างร่างหลายรูปแบบ" : "เพิ่มรายละเอียดผู้ชมและข้อเสนอเพื่อให้ Brief ชัดเจนขึ้น"}</p></div><b>{Math.min(98, 62 + Math.floor(brief.length / 4))}%</b></div>
             {error && <p className="studio-error" role="alert">{error}</p>}
             <button className="generate-button" disabled={!canCreate || saving || !brief.trim() || channels.length === 0} onClick={generateContent}><span>✦</span> {!canCreate ? "ต้องมี AI Content Studio" : saving ? "กำลังสร้างและบันทึก..." : `สร้างคอนเทนต์ ${channels.length} ช่องทาง`} <b>→</b></button>
 
@@ -262,13 +257,13 @@ export default function StudioPage() {
             <div className="panel-heading"><div><span className="step-pill">02</span><h2>Generated content</h2></div>{generated && <span className="result-count">{posts.length} drafts</span>}</div>
 
             {!generated ? (
-              <div className="empty-output"><div className="ai-orb">✦</div><h3>พร้อมเปลี่ยน Brief เป็นคอนเทนต์</h3><p>เลือกช่องทางและกดสร้าง แล้ว AI จะปรับรูปแบบ ความยาว และน้ำเสียงให้แต่ละแพลตฟอร์ม</p><div><span>Brand-safe</span><span>Localized</span><span>Channel-ready</span></div></div>
+              <div className="empty-output"><div className="ai-orb">✦</div><h3>พร้อมเปลี่ยน Brief เป็นคอนเทนต์</h3><p>เลือกภาษาและช่องทางเพื่อสร้างร่างที่ใช้ภาษาเป้าหมาย พร้อมรูปแบบสำหรับแต่ละแพลตฟอร์ม</p><div><span>21 languages</span><span>RTL-ready</span><span>Channel format</span></div></div>
             ) : (
               <div className="post-list">
                 {posts.map((post) => (
                   <article className="post-card" key={post.id}>
                     <div className={`post-art ${artColors[post.channel] ?? "dark"}`}><span>N</span><small>{post.format}</small></div>
-                    <div className="post-content"><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
+                    <div className="post-content" dir={selectedLanguage.rtl ? "rtl" : "ltr"}><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
                   </article>
                 ))}
                 {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีร่างคอนเทนต์</h3><p>เลือกช่องทางอย่างน้อยหนึ่งช่องทาง แล้วสร้างแคมเปญใหม่</p></div>}
@@ -277,7 +272,7 @@ export default function StudioPage() {
           </section>
         </div>
 
-        <footer className="studio-status"><span><i /> Nirva AI connected</span><span>Language: {languageNames[language]}</span><span>{scheduledCount} scheduled</span></footer>
+        <footer className="studio-status"><span><i /> Nirva NLE registry connected</span><span>Language: {selectedLanguage.nativeName} · {selectedLanguage.name}{selectedLanguage.rtl ? " · RTL" : ""}</span><span>{scheduledCount} scheduled</span></footer>
       </section>
     </main>
   );

@@ -42,7 +42,7 @@ const connectorFamilies = [
 const features = [
   { icon: "✦", title: "AI Content Studio", text: "เปลี่ยนไอเดียเดียวให้เป็นข้อความ ภาพ วิดีโอ เสียง และซับไตเติลที่พร้อมใช้" },
   { icon: "◎", title: "Smart Publisher", text: "ปรับรูปแบบ ตั้งเวลา และเผยแพร่คอนเทนต์ไปทุกช่องทางจากพื้นที่เดียว" },
-  { icon: "文", title: "Language Engine", text: "แปลและปรับบริบท น้ำเสียง วัฒนธรรม และรูปแบบการสื่อสารมากกว่า 100 ภาษา" },
+  { icon: "文", title: "Language Engine", text: "ทะเบียนภาษา 21 ภาษา พร้อมร่างคอนเทนต์หลายอักษรและการจัดวางภาษา RTL สำหรับ Arabic และ Hebrew" },
   { icon: "↗", title: "Performance Intelligence", text: "ดูผลลัพธ์แบบรวม วิเคราะห์สิ่งที่ได้ผล และส่งข้อมูลกลับไปให้ AI พัฒนารอบต่อไป" },
   { icon: "⌘", title: "Workflow Automation", text: "สร้างแคมเปญ ปฏิทินคอนเทนต์ และขั้นตอนอนุมัติที่ทำงานต่อเนื่องอัตโนมัติ" },
   { icon: "◫", title: "One Asset Library", text: "รวมแบรนด์ ไฟล์ ต้นฉบับ และเวอร์ชันทั้งหมดให้ทีมค้นหาและนำกลับมาใช้ได้ง่าย" },
@@ -93,7 +93,7 @@ export default function Home() {
             <a className="button ghost" href="#workflow"><span className="play">▶</span> ดูวิธีทำงาน</a>
           </div>
           <div className="hero-proof">
-            <div><strong>100+</strong><span>ภาษาและบริบท</span></div>
+            <div><strong>21</strong><span>ภาษาใน NLE Core</span></div>
             <div><strong>30+</strong><span>ช่องทางเผยแพร่</span></div>
             <div><strong>1</strong><span>พื้นที่ทำงานเดียว</span></div>
           </div>
@@ -137,7 +137,7 @@ export default function Home() {
             </div>
           </div>
           <div className="floating-chip chip-one"><span>↗</span><div><small>Engagement</small><strong>+28.4%</strong></div></div>
-          <div className="floating-chip chip-two"><span>文</span><div><small>Language</small><strong>100+ languages</strong></div></div>
+          <div className="floating-chip chip-two"><span>文</span><div><small>Language</small><strong>21 active languages</strong></div></div>
         </div>
       </section>
 
@@ -221,8 +221,8 @@ export default function Home() {
         <div className="language-copy">
           <span className="section-kicker">NIRVA LANGUAGE ENGINE</span>
           <h2>ไม่ใช่แค่แปลภาษา<br /><em>แต่เข้าใจผู้คน</em></h2>
-          <p>Nirva Language Engine เข้าใจบริบท วัฒนธรรม สำเนียง น้ำเสียง เวลา สกุลเงิน และรูปแบบการสื่อสาร เพื่อให้แบรนด์ของคุณเป็นธรรมชาติในทุกตลาด</p>
-          <div className="language-stats"><div><strong>100+</strong><span>ภาษา</span></div><div><strong>200+</strong><span>ประเทศและภูมิภาค</span></div></div>
+          <p>Nirva Language Engine เปิดใช้ทะเบียน 21 ภาษาและรองรับหลายระบบอักษรใน Studio แล้ว ส่วนการแปลด้วยผู้ให้บริการและ Translation Memory อยู่ในขั้นเชื่อมระบบถัดไป</p>
+          <div className="language-stats"><div><strong>21</strong><span>ภาษาที่เปิดใช้</span></div><div><strong>12</strong><span>ระบบอักษร</span></div></div>
         </div>
       </section>
 

@@ -1,6 +1,8 @@
 import { desc, inArray } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { campaignPosts, campaigns } from "../../../db/schema";
+import { getLocalizedCampaignCopy } from "../../../lib/nle/campaign-copy";
+import { getNirvaLanguage, isSupportedNirvaLanguage } from "../../../lib/nle/languages";
 
 const channelTemplates: Record<string, { format: string; title: string; body: string }> = {
   Instagram: {
@@ -137,11 +139,16 @@ export async function POST(request: Request) {
     const channels = Array.from(new Set(payload.channels ?? [])).filter((channel) => channel in channelTemplates);
 
     if (!brief) return Response.json({ error: "brief is required" }, { status: 400 });
+    if (!isSupportedNirvaLanguage(language)) {
+      return Response.json({ error: "language is not supported by the 21-language NLE registry" }, { status: 400 });
+    }
     if (!channels.length) return Response.json({ error: "at least one supported channel is required" }, { status: 400 });
 
     const db = getDb();
     const campaignId = crypto.randomUUID();
     const now = new Date();
+    const localizedCopy = getLocalizedCampaignCopy(language);
+    const languageInfo = getNirvaLanguage(language)!;
     const postRows = channels.map((channel) => {
       const template = channelTemplates[channel];
       return {
@@ -149,8 +156,8 @@ export async function POST(request: Request) {
         campaignId,
         channel,
         format: template.format,
-        title: template.title,
-        body: `${template.body} น้ำเสียง: ${tone}`,
+        title: localizedCopy.title,
+        body: localizedCopy.body,
         status: "draft",
         createdAt: now,
       };
@@ -172,7 +179,14 @@ export async function POST(request: Request) {
       db.insert(campaignPosts).values(postRows),
     ]);
 
-    return Response.json({ campaign: { ...campaignRow, posts: postRows } }, { status: 201 });
+    return Response.json({
+      campaign: { ...campaignRow, posts: postRows },
+      localization: {
+        language: languageInfo,
+        mode: "curated-nle-preview",
+        providerTranslation: false,
+      },
+    }, { status: 201 });
   } catch (error) {
     return Response.json({ error: errorMessage(error) }, { status: 500 });
   }

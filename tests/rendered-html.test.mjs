@@ -23,9 +23,31 @@ test("server-renders the Campaign Studio continuation", async () => {
   assert.match(page, /Campaign Studio/);
   assert.match(page, /Campaign brief/);
   assert.match(page, /Generated content/);
-  assert.match(page, /Nirva AI connected/);
+  assert.match(page, /Nirva NLE registry connected/);
+  assert.match(page, /NIRVA_LANGUAGES/);
   assert.match(page, /fetch\("\/api\/campaigns"/);
   assert.match(page, /งานล่าสุด/);
+});
+
+test("activates the upstream 21-language NLE registry without overstating translation", async () => {
+  const [languages, copy, languageRoute, campaignsRoute, home] = await Promise.all([
+    readFile(new URL("../lib/nle/languages.ts", import.meta.url), "utf8"),
+    readFile(new URL("../lib/nle/campaign-copy.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/languages/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/campaigns/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+  ]);
+
+  const languageEntries = languages.match(/\{ code: "/g) ?? [];
+  assert.equal(languageEntries.length, 21);
+  assert.match(languages, /code: "ar"[\s\S]*rtl: true/);
+  assert.match(languages, /code: "he"[\s\S]*rtl: true/);
+  assert.match(copy, /Une idée pour chaque marché/);
+  assert.match(copy, /فكرة واحدة لكل سوق/);
+  assert.match(languageRoute, /providerTranslation: "integration_required"/);
+  assert.match(campaignsRoute, /isSupportedNirvaLanguage/);
+  assert.match(campaignsRoute, /getLocalizedCampaignCopy/);
+  assert.doesNotMatch(home, /100\+ languages|100\+<\/strong><span>ภาษา/);
 });
 
 test("removes starter preview dependencies and keeps product metadata", async () => {

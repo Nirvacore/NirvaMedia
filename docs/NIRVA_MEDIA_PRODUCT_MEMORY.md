@@ -58,17 +58,26 @@ reused.
   account setup records, a publish queue, and connector audit events
 - Campaign Studio scheduling now creates a publish job and truthfully blocks it
   for authorization until a matching external account is connected
-- Original media modules, tests, Studio OS, mobile shell, SDKs, and roadmaps
-  preserved under the upstream snapshot
+- Active NLE adapter with the upstream 21-language registry, 12 writing
+  systems, curated Studio draft copy for all 21 languages, and RTL layout for
+  Arabic and Hebrew
+- Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
+  roadmaps preserved under the upstream snapshot
 
 ## Important truth boundary
 
-The website, persistent Campaign Studio, market map, draft generation,
-scheduling records, connector account registry, publishing queue, and connector
-audit events are implemented. Live third-party account authorization and
-publishing are not yet connected. Platform OAuth, credential vault, app review,
-tokens, webhooks, publishing calls, retries, and analytics ingestion remain
-implementation work.
+The website, persistent Campaign Studio, market map, 21-language registry,
+curated multilingual draft generation, RTL layout, scheduling records,
+connector account registry, publishing queue, and connector audit events are
+implemented. Provider-backed translation, translation memory, live third-party
+account authorization, and publishing are not yet connected. Platform OAuth,
+credential vault, app review, tokens, webhooks, publishing calls, retries, and
+analytics ingestion remain implementation work.
+
+The upstream NLE documentation describes 21 languages. A nearby count of 10 is
+the language test count, not the supported-language count. Do not market the
+current product as having 100+ active languages. Treat 100+ as a future target
+until the language registry, provider integrations, and quality checks prove it.
 
 Roadmap documents for ML, multi-region infrastructure, Kubernetes, and several
 enterprise capabilities are plans, not proof that production infrastructure is
@@ -145,6 +154,19 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-08-04: Audited the original NLE source directly on
+  `claude/nirva-media-nle-vision-h0v1z0`. Confirmed 21 languages, not 100+.
+- The local `upstream/nirva-ai/` directory is a selective snapshot, not the
+  complete Claude repository. It omitted `server/language/index.ts`,
+  `shared/language.ts`, and the NLE architecture document even though the
+  preserved media module imports the missing language service.
+- Added an explicit active-site NLE adapter instead of modifying the preserved
+  upstream snapshot. Studio now lists all 21 languages, validates language
+  codes, emits reviewed starter copy in the selected language, and applies RTL
+  layout for Arabic and Hebrew.
+- Added `/api/languages` with explicit capability states. Provider translation
+  and translation memory report `integration_required` rather than appearing
+  live. Removed the unsupported 100+ language claim from the product page.
 - 2026-08-04: Added `/connections` Connection Center.
 - Added D1 tables for `connector_accounts`, `publish_jobs`, and
   `connector_events`, with workspace and scheduling indexes.
