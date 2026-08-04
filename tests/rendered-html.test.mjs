@@ -51,10 +51,11 @@ test("activates the upstream 21-language NLE registry without overstating transl
 });
 
 test("removes starter preview dependencies and keeps product metadata", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+  const [page, layout, packageJson, builtWrangler] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../dist/server/wrangler.json", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /NirvaMedia/);
@@ -62,6 +63,7 @@ test("removes starter preview dependencies and keeps product metadata", async ()
   assert.match(layout, /Nirva Media/);
   assert.match(layout, /images:\s*\[\{ url: "\/og\.png"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
+  assert.doesNotMatch(builtWrangler, /nodejs_compat/);
   assert.deepEqual(await readdir(new URL("../app/_sites-preview/", import.meta.url)), []);
 });
 
