@@ -30,7 +30,7 @@ global platforms from one workspace.
 - Local product root: `/Users/machd/Documents/Codex/NirvaMedia-site`
 - Live private site: `https://nirva-media.jidlada-w.chatgpt.site`
 - Campaign Studio: `https://nirva-media.jidlada-w.chatgpt.site/studio`
-- Connection Center: `https://nirva-media.jidlada-w.chatgpt.site/connections`
+- Connection Center source route: `/connections` (hosting rollout pending)
 - Original Claude repository: `https://github.com/Nirvacore/nirva-AI`
 - Preserved Claude snapshot: `upstream/nirva-ai/`
 - Upstream source branch: `claude/nirva-media-nle-vision-h0v1z0`
@@ -152,6 +152,9 @@ formats, limits, and errors.
   state stops at `setup_required` and clearly labels OAuth as the next step.
 - Studio scheduling adds entitlement-checked publish jobs. Jobs remain
   `blocked_auth` until a matching account reaches `connected`.
+- Sites version 8 was saved, but the 2026-08-04 hosting rollout was rejected by
+  a provider compatibility-flag transition. GitHub has the complete source;
+  the live URL remains on the prior version until deployment is retried.
 - 2026-08-03: Added `/solutions` Product Fabric builder.
 - Customers can start from Starter, Growth, Asia Expansion, China Market, or
   Enterprise Global, then add or remove modules and connector families.
