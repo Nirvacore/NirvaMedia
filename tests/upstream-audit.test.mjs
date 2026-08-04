@@ -15,7 +15,8 @@ test("records the selective upstream snapshot without claiming a complete checko
   assert.ok(inventory.inventory.executable.length > 0);
   assert.ok(inventory.inventory.roadmap.length > 0);
   assert.ok(inventory.inventory.missing.length > 0);
-  assert.equal(inventory.capabilityTruth.providerTranslation, "integration_required");
+  assert.equal(inventory.capabilityTruth.providerTranslation, "credential_required");
+  assert.equal(inventory.capabilityTruth.translationMemory, "active_d1");
   assert.equal(inventory.capabilityTruth.upstreamMediaRuntime, "dependency_incomplete");
 });
 
@@ -31,6 +32,6 @@ test("exposes only the selected provider-free NLE adapter as active", async () =
   assert.match(adapter, /Intl\.DateTimeFormat/);
   assert.doesNotMatch(adapter, /OLLAMA|OPENAI_API_KEY|nle_translations/);
   assert.match(languageRoute, /scriptDetection: "active"/);
-  assert.match(languageRoute, /providerTranslation: "integration_required"/);
+  assert.match(languageRoute, /provider\.available \? "active" : "unavailable"/);
   assert.match(statusRoute, /upstream-source-inventory\.json/);
 });

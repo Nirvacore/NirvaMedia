@@ -64,18 +64,21 @@ reused.
 - Machine-readable upstream audit at `docs/upstream-source-inventory.json` and
   `/api/upstream-status`, explicitly separating executable references,
   roadmaps, active adapters, and missing source
+- D1 Translation Memory with workspace-scoped exact matching, hit tracking,
+  provider-result persistence, and reviewed manual entries
 - Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
   roadmaps preserved under the upstream snapshot
 
 ## Important truth boundary
 
 The website, persistent Campaign Studio, market map, 21-language registry,
-curated multilingual draft generation, RTL layout, scheduling records,
-connector account registry, publishing queue, and connector audit events are
-implemented. Provider-backed translation, translation memory, live third-party
-account authorization, and publishing are not yet connected. Platform OAuth,
-credential vault, app review, tokens, webhooks, publishing calls, retries, and
-analytics ingestion remain implementation work.
+curated multilingual draft generation, RTL layout, D1 Translation Memory,
+scheduling records, connector account registry, publishing queue, and connector
+audit events are implemented. Provider-backed translation is active only when
+a server-side credential is configured; without one the API truthfully returns
+`unavailable`. Live third-party account authorization and publishing are not
+yet connected. Platform OAuth, credential vault, app review, tokens, webhooks,
+publishing calls, retries, and analytics ingestion remain implementation work.
 
 The upstream NLE documentation describes 21 languages. A nearby count of 10 is
 the language test count, not the supported-language count. Do not market the
@@ -168,12 +171,20 @@ formats, limits, and errors.
   codes, emits reviewed starter copy in the selected language, and applies RTL
   layout for Arabic and Hebrew.
 - Added `/api/languages` with explicit capability states. Provider translation
-  and translation memory report `integration_required` rather than appearing
-  live. Removed the unsupported 100+ language claim from the product page.
+  reports runtime credential availability, while Translation Memory reports
+  active only after its D1 implementation. Removed the unsupported 100+
+  language claim from the product page.
 - Added the provider-free portion of upstream `shared/language.ts` through the
   active `lib/nle/localization.ts` adapter. Script detection and `Intl` number,
   currency, date, timezone, and RTL formatting are active; the Node/Express
   provider, translation-memory, and speech stack was deliberately not copied.
+- Reimplemented the Translation Memory boundary for the active Cloudflare/D1
+  product rather than copying the upstream Node/Express/SQLite runtime.
+  `POST /api/translations` checks exact memory first, calls the provider only
+  when configured, and persists verified provider output. Reviewed translations
+  can be stored through `PUT /api/translations` or the explicit
+  `POST /api/translations/remember` alias; recent entries are listed by
+  `GET /api/translations`. No cache miss produces mock output.
 - Added a reproducible upstream inventory after comparing all 437 source files
   with the 94-file selective snapshot at commit `12b7034`. Ninety-three files
   are exact source equivalents (including five relocated roadmaps), one is the

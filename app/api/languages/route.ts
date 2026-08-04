@@ -1,7 +1,9 @@
 import { NIRVA_LANGUAGE_COUNT, NIRVA_LANGUAGES } from "../../../lib/nle/languages";
 import { detectLanguageByScript, localize } from "../../../lib/nle/localization";
+import { getTranslationProviderStatus } from "../../../lib/nle/translation-provider";
 
 export async function GET() {
+  const provider = getTranslationProviderStatus();
   return Response.json({
     count: NIRVA_LANGUAGE_COUNT,
     languages: NIRVA_LANGUAGES,
@@ -11,10 +13,11 @@ export async function GET() {
       rtlLayout: "active",
       scriptDetection: "active",
       intlLocalization: "active",
-      providerTranslation: "integration_required",
-      translationMemory: "integration_required",
+      providerTranslation: provider.available ? "active" : "unavailable",
+      translationMemory: "active",
       speechToText: "integration_required",
     },
+    provider,
   });
 }
 

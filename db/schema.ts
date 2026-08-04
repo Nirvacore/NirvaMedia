@@ -1,7 +1,9 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export type ConnectorAccountStatus = "setup_required" | "connected" | "error";
 export type PublishJobStatus = "queued" | "blocked_auth" | "published" | "failed";
+export type TranslationMemorySource = "provider" | "manual";
+export type TranslationMemoryStatus = "active" | "archived";
 
 export const campaigns = sqliteTable(
   "campaigns",
@@ -122,5 +124,28 @@ export const connectorEvents = sqliteTable(
   },
   (table) => [
     index("idx_connector_events_workspace_created_at").on(table.workspaceId, table.createdAt),
+  ],
+);
+
+export const translationMemories = sqliteTable(
+  "translation_memories",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id").notNull(),
+    sourceHash: text("source_hash").notNull(),
+    sourceLanguage: text("source_language").notNull(),
+    targetLanguage: text("target_language").notNull(),
+    sourceText: text("source_text").notNull(),
+    translatedText: text("translated_text").notNull(),
+    source: text("source").$type<TranslationMemorySource>().notNull(),
+    providerId: text("provider_id"),
+    status: text("status").$type<TranslationMemoryStatus>().notNull().default("active"),
+    hitCount: integer("hit_count").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("idx_translation_memories_workspace_hash").on(table.workspaceId, table.sourceHash),
+    index("idx_translation_memories_workspace_updated_at").on(table.workspaceId, table.updatedAt),
   ],
 );

@@ -49,6 +49,15 @@ type LanguageCapabilities = {
   translationMemory: string;
 };
 
+type TranslationSource = "memory" | "provider" | "unavailable";
+
+type TranslationResult = {
+  text: string;
+  source: TranslationSource;
+  message: string;
+  memorySource?: "manual" | "provider";
+};
+
 const defaultLanguageCapabilities: LanguageCapabilities = {
   registry: "active",
   curatedStudioCopy: "active",
@@ -107,6 +116,13 @@ export default function StudioPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [languageCapabilities, setLanguageCapabilities] = useState(defaultLanguageCapabilities);
+  const [sourceText, setSourceText] = useState("หนึ่งไอเดีย ไปได้ทุกตลาด");
+  const [sourceLanguage, setSourceLanguage] = useState("th");
+  const [targetLanguage, setTargetLanguage] = useState("en");
+  const [translating, setTranslating] = useState(false);
+  const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
+  const [manualTranslation, setManualTranslation] = useState("");
+  const [savingMemory, setSavingMemory] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -208,12 +224,97 @@ export default function StudioPage() {
     }
   }
 
+  async function translateFreeText() {
+    setTranslationResult(null);
+    if (!sourceText.trim()) {
+      setTranslationResult({ text: "", source: "unavailable", message: "กรุณาใส่ข้อความต้นฉบับก่อนแปล" });
+      return;
+    }
+    if (sourceLanguage === targetLanguage) {
+      setTranslationResult({ text: "", source: "unavailable", message: "กรุณาเลือกภาษาปลายทางที่ต่างจากภาษาต้นฉบับ" });
+      return;
+    }
+
+    setTranslating(true);
+    try {
+      const response = await fetch("/api/translations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceText: sourceText.trim(), sourceLanguage, targetLanguage }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const result = data.translation ?? data.result ?? data;
+      const source = ["memory", "provider", "unavailable"].includes(result.source)
+        ? result.source as TranslationSource
+        : "unavailable";
+      const text = result.text ?? result.targetText ?? data.translatedText ?? "";
+      const message = result.message ?? data.message ?? data.error ?? (source === "unavailable"
+        ? "ยังไม่พบคำแปลใน Memory และ Provider ยังไม่พร้อมใช้งาน"
+        : "แปลข้อความเรียบร้อย");
+
+      if (!response.ok || !text) {
+        setTranslationResult({ text: "", source: "unavailable", message });
+      } else {
+        setTranslationResult({ text, source, message, memorySource: result.memorySource });
+      }
+    } catch {
+      setTranslationResult({ text: "", source: "unavailable", message: "ยังติดต่อระบบแปลไม่ได้ กรุณาลองใหม่ภายหลัง" });
+    } finally {
+      setTranslating(false);
+    }
+  }
+
+  async function saveManualTranslation() {
+    if (!manualTranslation.trim()) return;
+    setSavingMemory(true);
+    try {
+      const response = await fetch("/api/translations/remember", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceText: sourceText.trim(),
+          sourceLanguage,
+          targetLanguage,
+          translatedText: manualTranslation.trim(),
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const result = data.translation ?? data.memory ?? data;
+      if (!response.ok) throw new Error(data.error?.message ?? data.error ?? data.message ?? "บันทึก Memory ไม่สำเร็จ");
+      setTranslationResult({
+        text: result.text ?? result.translatedText ?? manualTranslation.trim(),
+        source: "memory",
+        memorySource: "manual",
+        message: result.message ?? "บันทึกคำแปลที่ตรวจแล้วเข้า Translation Memory เรียบร้อย",
+      });
+      setManualTranslation("");
+    } catch (cause) {
+      setTranslationResult({
+        text: "",
+        source: "unavailable",
+        message: cause instanceof Error ? cause.message : "บันทึก Translation Memory ไม่สำเร็จ",
+      });
+    } finally {
+      setSavingMemory(false);
+    }
+  }
+
+  function swapTranslationLanguages() {
+    setSourceLanguage(targetLanguage);
+    setTargetLanguage(sourceLanguage);
+    if (translationResult?.text) setSourceText(translationResult.text);
+    setTranslationResult(null);
+    setManualTranslation("");
+  }
+
   const scheduledCount = posts.filter((post) => post.status === "scheduled").length;
   const availableChannels = allChannelOptions.filter((channel) => channelsForConnectors(entitlement.connectorIds).includes(channel));
   const canCreate = entitlement.moduleIds.includes("content-studio");
   const canLocalize = entitlement.moduleIds.includes("language-engine");
   const canPublish = entitlement.moduleIds.includes("smart-publisher");
   const selectedLanguage = getNirvaLanguage(language) ?? NIRVA_LANGUAGES[0];
+  const selectedSourceLanguage = getNirvaLanguage(sourceLanguage) ?? NIRVA_LANGUAGES[0];
+  const selectedTargetLanguage = getNirvaLanguage(targetLanguage) ?? NIRVA_LANGUAGES[1];
 
   return (
     <main className="studio-app">
@@ -224,7 +325,7 @@ export default function StudioPage() {
           <a href="#content"><span>▦</span> Content Library</a>
           <a href="#calendar"><span>□</span> Calendar</a>
           <a href="#analytics"><span>↗</span> Analytics</a>
-          <a href="#language"><span>文</span> Language Engine</a>
+          <a href="#translation"><span>文</span> Language Engine</a>
         </nav>
         <div className="workspace-card"><span>NW</span><div><strong>Nirva Workspace</strong><small>3 collaborators</small></div><b>⌄</b></div>
         <a className="back-site" href="/connections">◎ Connection Center</a>
@@ -266,7 +367,7 @@ export default function StudioPage() {
               <div className="language-list" aria-label="ภาษาที่รองรับทั้ง 21 ภาษา">
                 {NIRVA_LANGUAGES.map((item) => <span className={item.code === language ? "selected" : ""} dir={item.rtl ? "rtl" : "ltr"} key={item.code}>{item.nativeName}<small>{item.code.toUpperCase()}{item.rtl ? " · RTL" : ""}</small></span>)}
               </div>
-              <p><strong>พร้อมใช้ตอนนี้:</strong> เลือกภาษาเพื่อสร้างร่างที่ผ่านการเตรียมข้อความตัวอย่างและจัดทิศทางตัวอักษรแล้ว · <strong>ยังรอเชื่อม:</strong> การแปลข้อความอิสระผ่าน Provider และ Translation Memory จึงยังไม่ควรนับเป็นการแปลอัตโนมัติแบบ Production</p>
+              <p><strong>พร้อมใช้ตอนนี้:</strong> ร่างข้อความ 21 ภาษา, RTL และ Translation Memory ที่บันทึกคำแปลซึ่งผ่านการตรวจแล้ว · <strong>ยังรอเชื่อม:</strong> การแปลอัตโนมัติผ่าน Provider ต้องมี Credential ก่อนจึงจะนับเป็น Provider-ready</p>
             </section>
 
             <span className="field-label">ช่องทาง</span>
@@ -311,6 +412,80 @@ export default function StudioPage() {
             )}
           </section>
         </div>
+
+        <section className="translation-workbench" id="translation">
+          <div className="translation-heading">
+            <div><span className="step-pill">03</span><div><small>LANGUAGE ENGINE · MEMORY FIRST</small><h2>แปลข้อความอิสระ</h2><p>ตรวจ Translation Memory ก่อน และเรียก Provider เฉพาะเมื่อระบบยืนยันว่ามี Credential พร้อมใช้งาน</p></div></div>
+            <div className="translation-truth"><i /> Provider status: <strong>{languageCapabilities.providerTranslation === "active" ? "พร้อมใช้" : "ยังรอเชื่อม"}</strong></div>
+          </div>
+
+          <div className="translation-grid">
+            <div className="translation-pane">
+              <div className="translation-pane-top">
+                <label htmlFor="source-language">ภาษาต้นฉบับ</label>
+                <select id="source-language" value={sourceLanguage} onChange={(event) => { setSourceLanguage(event.target.value); setTranslationResult(null); setManualTranslation(""); }}>
+                  {NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}
+                </select>
+              </div>
+              <textarea
+                id="translation-source"
+                aria-label="ข้อความต้นฉบับสำหรับแปล"
+                lang={selectedSourceLanguage.code}
+                dir={selectedSourceLanguage.rtl ? "rtl" : "ltr"}
+                value={sourceText}
+                onChange={(event) => { setSourceText(event.target.value); setTranslationResult(null); setManualTranslation(""); }}
+                placeholder="พิมพ์หรือวางข้อความที่ต้องการแปล"
+              />
+              <small>{sourceText.length} ตัวอักษร · {selectedSourceLanguage.script}{selectedSourceLanguage.rtl ? " · RTL" : ""}</small>
+            </div>
+
+            <button className="translation-swap" type="button" aria-label="สลับภาษาต้นฉบับและปลายทาง" onClick={swapTranslationLanguages}>⇄</button>
+
+            <div className="translation-pane result-pane">
+              <div className="translation-pane-top">
+                <label htmlFor="target-language">ภาษาปลายทาง</label>
+                <select id="target-language" value={targetLanguage} onChange={(event) => { setTargetLanguage(event.target.value); setTranslationResult(null); setManualTranslation(""); }}>
+                  {NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}
+                </select>
+              </div>
+              <div className={`translation-output ${translationResult?.source ?? "idle"}`} lang={selectedTargetLanguage.code} dir={selectedTargetLanguage.rtl ? "rtl" : "ltr"} aria-live="polite">
+                {translating ? <span className="translation-loading">กำลังตรวจ Memory และความพร้อมของ Provider…</span> : translationResult?.text ? <p>{translationResult.text}</p> : <span>{translationResult?.message ?? "คำแปลจะแสดงที่นี่ พร้อมระบุแหล่งที่มาอย่างชัดเจน"}</span>}
+              </div>
+              <div className="translation-source-state">
+                {translationResult ? <span className={translationResult.source}><i /> Source: {translationResult.source}{translationResult.memorySource ? `/${translationResult.memorySource}` : ""}</span> : <span><i /> ยังไม่มีผลลัพธ์</span>}
+                {translationResult?.message && translationResult.text && <small>{translationResult.message}</small>}
+              </div>
+            </div>
+          </div>
+
+          {translationResult?.source === "unavailable" && (
+            <div className="manual-memory-panel">
+              <div className="manual-memory-intro"><span>✓</span><div><small>HUMAN-VERIFIED FALLBACK</small><h3>เพิ่มคำแปลที่ตรวจแล้วเข้า Memory</h3><p>เมื่อยังไม่มี Provider ผู้ตรวจภาษาสามารถบันทึกคำแปลที่อนุมัติแล้ว เพื่อให้ข้อความเดียวกันถูกนำกลับมาใช้เป็น <strong>memory/manual</strong> ในครั้งต่อไป</p></div></div>
+              <div className="manual-memory-editor">
+                <label htmlFor="manual-translation">คำแปลที่ตรวจแล้ว · {selectedTargetLanguage.nativeName}</label>
+                <textarea
+                  id="manual-translation"
+                  lang={selectedTargetLanguage.code}
+                  dir={selectedTargetLanguage.rtl ? "rtl" : "ltr"}
+                  value={manualTranslation}
+                  onChange={(event) => setManualTranslation(event.target.value)}
+                  placeholder="ใส่คำแปลที่ผู้ตรวจภาษาอนุมัติแล้ว"
+                />
+                <div><small>ระบบจะบันทึกเฉพาะข้อความที่ผู้ใช้กรอก ไม่สร้างคำแปลแทน</small><button type="button" disabled={savingMemory || !manualTranslation.trim()} onClick={saveManualTranslation}>{savingMemory ? "กำลังบันทึก…" : "บันทึก Translation Memory"}<b>＋</b></button></div>
+              </div>
+            </div>
+          )}
+
+          <div className="translation-actions">
+            <div>
+              <span className={languageCapabilities.translationMemory === "active" ? "active" : "pending"}><i /> Translation Memory {languageCapabilities.translationMemory === "active" ? "พร้อมค้นหา" : "รอเปิดใช้"}</span>
+              <span className={languageCapabilities.providerTranslation === "active" ? "active" : "pending"}><i /> Provider {languageCapabilities.providerTranslation === "active" ? "Credential พร้อม" : "ไม่มี Credential"}</span>
+            </div>
+            <button type="button" disabled={!canLocalize || translating || !sourceText.trim()} onClick={translateFreeText}>{!canLocalize ? "ต้องมี Language Engine" : translating ? "กำลังแปล…" : "ตรวจ Memory และแปล"}<b>→</b></button>
+          </div>
+
+          <p className="translation-disclaimer"><strong>ความจริงของระบบ:</strong> Source = <b>memory</b> หมายถึงใช้คำแปลที่บันทึกไว้, <b>provider</b> หมายถึง API ยืนยันการแปลจาก Provider ที่มี Credential, และ <b>unavailable</b> หมายถึงยังไม่มีคำแปล—ระบบจะไม่สร้างคำตอบจำลองขึ้นมาแทน</p>
+        </section>
 
         <footer className="studio-status"><span><i /> Nirva NLE registry connected</span><span>Language: {selectedLanguage.nativeName} · {selectedLanguage.name}{selectedLanguage.rtl ? " · RTL" : ""}</span><span>{scheduledCount} scheduled</span></footer>
       </section>

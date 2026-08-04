@@ -56,8 +56,12 @@ and is exposed by `GET /api/upstream-status`.
 - A provider-free NLE localization adapter for deterministic script detection
   and `Intl` number, currency, date, timezone, and RTL formatting
 - `/api/languages` capability reporting and provider-free detect/localize
-  actions, including honest `integration_required` states for provider
-  translation, translation memory, and speech-to-text
+  actions, including runtime credential status for provider translation and an
+  honest `integration_required` state for speech-to-text
+- A Cloudflare D1 Translation Memory with exact workspace-scoped lookup,
+  provider-result persistence, manual reviewed-entry storage, and recent-entry
+  listing. The provider adapter reports `unavailable` on cache misses when no
+  server-side credential exists and never fabricates a production translation
 - `/api/upstream-status` backed by a machine-readable executable, roadmap, and
   missing-source inventory
 - Clear repository boundaries and deployment configuration

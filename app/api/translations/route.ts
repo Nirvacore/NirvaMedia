@@ -1,0 +1,214 @@
+import { and, desc, eq, sql } from "drizzle-orm";
+import { getDb } from "../../../db";
+import { translationMemories, workspaceEntitlements } from "../../../db/schema";
+import { isSupportedNirvaLanguage } from "../../../lib/nle/languages";
+import {
+  createTranslationMemoryKey,
+  normalizeTranslationText,
+  TRANSLATION_TEXT_LIMIT,
+} from "../../../lib/nle/translation-memory";
+import {
+  getTranslationProviderStatus,
+  translateWithProvider,
+} from "../../../lib/nle/translation-provider";
+import { productBundles } from "../../../lib/product-catalog";
+import { rememberTranslation } from "./remember/route";
+
+const workspaceId = "nirva-workspace";
+const defaultBundle = productBundles.find((bundle) => bundle.id === "enterprise-global")!;
+
+async function hasLanguageEngine() {
+  const db = getDb();
+  const [entitlement] = await db
+    .select()
+    .from(workspaceEntitlements)
+    .where(eq(workspaceEntitlements.workspaceId, workspaceId))
+    .limit(1);
+  const moduleIds = entitlement?.moduleIds ?? [...defaultBundle.moduleIds];
+  return moduleIds.includes("language-engine");
+}
+
+function storageError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unexpected error";
+  if (message.includes("no such table")) {
+    return "Translation Memory storage is being prepared. Please retry shortly.";
+  }
+  return message;
+}
+
+export async function GET(request: Request) {
+  try {
+    if (!(await hasLanguageEngine())) {
+      return Response.json({ error: "Language Engine is not included in the active workspace solution" }, { status: 403 });
+    }
+
+    const url = new URL(request.url);
+    const requestedLimit = Number(url.searchParams.get("limit") ?? "50");
+    const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 100) : 50;
+    const sourceLanguage = url.searchParams.get("sourceLanguage")?.trim().toLowerCase();
+    const targetLanguage = url.searchParams.get("targetLanguage")?.trim().toLowerCase();
+    const conditions = [
+      eq(translationMemories.workspaceId, workspaceId),
+      eq(translationMemories.status, "active"),
+    ];
+    if (sourceLanguage) conditions.push(eq(translationMemories.sourceLanguage, sourceLanguage));
+    if (targetLanguage) conditions.push(eq(translationMemories.targetLanguage, targetLanguage));
+
+    const db = getDb();
+    const memories = await db
+      .select()
+      .from(translationMemories)
+      .where(and(...conditions))
+      .orderBy(desc(translationMemories.updatedAt))
+      .limit(limit);
+
+    return Response.json({ memories, provider: getTranslationProviderStatus() });
+  } catch (error) {
+    return Response.json({ error: storageError(error) }, { status: 500 });
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    if (!(await hasLanguageEngine())) {
+      return Response.json({ error: "Language Engine is not included in the active workspace solution" }, { status: 403 });
+    }
+
+    const payload = (await request.json()) as Record<string, unknown>;
+    const sourceText = typeof payload.sourceText === "string"
+      ? normalizeTranslationText(payload.sourceText)
+      : "";
+    const sourceLanguage = typeof payload.sourceLanguage === "string"
+      ? payload.sourceLanguage.trim().toLowerCase()
+      : "";
+    const targetLanguage = typeof payload.targetLanguage === "string"
+      ? payload.targetLanguage.trim().toLowerCase()
+      : "";
+
+    if (!sourceText || !sourceLanguage || !targetLanguage) {
+      return Response.json(
+        { error: "sourceText, sourceLanguage, and targetLanguage are required" },
+        { status: 400 },
+      );
+    }
+    if (sourceText.length > TRANSLATION_TEXT_LIMIT) {
+      return Response.json({ error: `sourceText exceeds ${TRANSLATION_TEXT_LIMIT} characters` }, { status: 413 });
+    }
+    if (!isSupportedNirvaLanguage(sourceLanguage) || !isSupportedNirvaLanguage(targetLanguage)) {
+      return Response.json({ error: "sourceLanguage and targetLanguage must be supported language codes" }, { status: 400 });
+    }
+    if (sourceLanguage === targetLanguage) {
+      return Response.json({
+        translation: {
+          text: sourceText,
+          source: "identity",
+          status: "translated",
+          cached: false,
+        },
+      });
+    }
+
+    const db = getDb();
+    const sourceHash = await createTranslationMemoryKey(sourceLanguage, targetLanguage, sourceText);
+    const [memory] = await db
+      .select()
+      .from(translationMemories)
+      .where(
+        and(
+          eq(translationMemories.workspaceId, workspaceId),
+          eq(translationMemories.sourceHash, sourceHash),
+          eq(translationMemories.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (memory) {
+      await db
+        .update(translationMemories)
+        .set({
+          hitCount: sql`${translationMemories.hitCount} + 1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(translationMemories.id, memory.id));
+      return Response.json({
+        translation: {
+          text: memory.translatedText,
+          source: "memory",
+          status: "translated",
+          cached: true,
+          memoryId: memory.id,
+          memorySource: memory.source,
+          provider: memory.providerId,
+        },
+      });
+    }
+
+    const result = await translateWithProvider({ text: sourceText, sourceLanguage, targetLanguage });
+    if (result.status === "unavailable") {
+      return Response.json(
+        {
+          translation: { text: null, source: "unavailable", status: "unavailable", cached: false },
+          provider: getTranslationProviderStatus(),
+          message: "ยังไม่พบคำแปลใน Memory และยังไม่มี Credential สำหรับ Translation Provider",
+          error: { code: "TRANSLATION_PROVIDER_UNAVAILABLE", message: "No translation provider credential is configured" },
+        },
+        { status: 503 },
+      );
+    }
+    if (result.status === "failed") {
+      return Response.json(
+        {
+          translation: { text: null, source: "unavailable", status: "failed", cached: false },
+          provider: { id: result.providerId, status: "error" },
+          message: "Translation Provider ตอบกลับไม่สำเร็จ และระบบไม่ได้สร้างคำแปลจำลองแทน",
+          error: { code: "TRANSLATION_PROVIDER_FAILED", message: result.reason },
+        },
+        { status: 502 },
+      );
+    }
+
+    const now = new Date();
+    const memoryRow = {
+      id: crypto.randomUUID(),
+      workspaceId,
+      sourceHash,
+      sourceLanguage,
+      targetLanguage,
+      sourceText,
+      translatedText: result.text,
+      source: "provider" as const,
+      providerId: result.providerId,
+      status: "active" as const,
+      hitCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.insert(translationMemories).values(memoryRow).onConflictDoUpdate({
+      target: [translationMemories.workspaceId, translationMemories.sourceHash],
+      set: {
+        translatedText: memoryRow.translatedText,
+        source: memoryRow.source,
+        providerId: memoryRow.providerId,
+        status: memoryRow.status,
+        updatedAt: memoryRow.updatedAt,
+      },
+    });
+
+    return Response.json({
+      translation: {
+        text: result.text,
+        source: "provider",
+        status: "translated",
+        cached: false,
+        provider: result.providerId,
+        model: result.model,
+      },
+    });
+  } catch (error) {
+    return Response.json({ error: storageError(error) }, { status: 500 });
+  }
+}
+
+export async function PUT(request: Request) {
+  return rememberTranslation(request);
+}

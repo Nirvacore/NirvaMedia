@@ -101,10 +101,10 @@
     ],
     "missing": [
       {
-        "id": "provider-translation-memory",
+        "id": "provider-translation-runtime",
         "status": "upstream_only_not_integrated",
         "upstreamPaths": ["server/language/index.ts", "server/db/index.ts", "server/auth/index.ts", "server/providers/**"],
-        "reason": "The implementation depends on the Nirva AI Node/Express/SQLite/auth/provider runtime and cannot be copied safely into the Cloudflare D1 site as-is."
+        "reason": "The upstream implementation depends on the Nirva AI Node/Express/SQLite/auth/provider runtime and was not copied as-is. The active product now has its own D1 Translation Memory and credential-aware provider adapter boundary."
       },
       {
         "id": "speech-to-text",
@@ -132,8 +132,8 @@
     "curatedStudioCopy": "active",
     "scriptDetection": "active",
     "intlLocalization": "active",
-    "providerTranslation": "integration_required",
-    "translationMemory": "integration_required",
+    "providerTranslation": "credential_required",
+    "translationMemory": "active_d1",
     "speechToText": "integration_required",
     "upstreamStudioRuntime": "reference_only",
     "upstreamMediaRuntime": "dependency_incomplete"
