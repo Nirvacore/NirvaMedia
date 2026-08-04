@@ -174,9 +174,11 @@ formats, limits, and errors.
   state stops at `setup_required` and clearly labels OAuth as the next step.
 - Studio scheduling adds entitlement-checked publish jobs. Jobs remain
   `blocked_auth` until a matching account reaches `connected`.
-- Sites version 8 was saved, but the 2026-08-04 hosting rollout was rejected by
-  a provider compatibility-flag transition. GitHub has the complete source;
-  the live URL remains on the prior version until deployment is retried.
+- Sites version 11 was saved after removing the now-default compatibility flag
+  from both source and the packaged artifact. The provider still returned the
+  same duplicate-flag error, indicating a hosting-side injection issue. GitHub
+  and the local Studio have the complete 21-language source; the live URL
+  remains on the prior version until the provider issue is resolved.
 - 2026-08-03: Added `/solutions` Product Fabric builder.
 - Customers can start from Starter, Growth, Asia Expansion, China Market, or
   Enterprise Global, then add or remove modules and connector families.
