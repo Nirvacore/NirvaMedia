@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-08-04",
+  "source": {
+    "repository": "https://github.com/Nirvacore/nirva-AI",
+    "branch": "claude/nirva-media-nle-vision-h0v1z0",
+    "commit": "12b703434d724b1aff04675602d52356ee9c2198"
+  },
+  "snapshot": {
+    "path": "upstream/nirva-ai",
+    "completeCheckout": false,
+    "upstreamFileCount": 437,
+    "localFileCount": 94,
+    "exactPathAndContentMatches": 88,
+    "relocatedExactMatches": 5,
+    "intentionalMetadataFiles": 1,
+    "upstreamFilesNotPreserved": 343,
+    "notes": [
+      "Five root roadmap files were preserved byte-for-byte under docs/roadmaps.",
+      "The local README is intentionally different because it documents the selective snapshot.",
+      "Counts exclude Git metadata and were measured against the source commit above."
+    ]
+  },
+  "inventory": {
+    "executable": [
+      {
+        "id": "active-language-registry",
+        "status": "adapted_active",
+        "upstreamPaths": ["shared/language.ts", "server/language/index.ts"],
+        "localPaths": ["lib/nle/languages.ts"],
+        "capabilities": ["21-language registry", "script metadata", "RTL metadata"]
+      },
+      {
+        "id": "active-language-pure-core",
+        "status": "adapted_active",
+        "upstreamPaths": ["shared/language.ts"],
+        "localPaths": ["lib/nle/localization.ts", "app/api/languages/route.ts"],
+        "capabilities": ["script detection", "number formatting", "currency formatting", "date and timezone formatting"],
+        "limitations": ["Latin-script detection cannot identify a specific Latin language"]
+      },
+      {
+        "id": "studio-os-reference",
+        "status": "preserved_reference_only",
+        "upstreamPaths": ["apps/nirva-studio-os/**"],
+        "localPaths": ["upstream/nirva-ai/apps/nirva-studio-os/**"],
+        "limitations": ["Its optional live bridge targets the separate Nirva AI Core runtime and is not connected to the active site"]
+      },
+      {
+        "id": "media-service-reference",
+        "status": "preserved_dependency_incomplete",
+        "upstreamPaths": ["server/media/**", "server/api/nmd.ts", "shared/media.ts"],
+        "localPaths": ["upstream/nirva-ai/server/media/**", "upstream/nirva-ai/server/api/nmd.ts", "upstream/nirva-ai/shared/media.ts"],
+        "limitations": ["The selective snapshot omits required monolith auth, database, provider, and runtime modules"]
+      },
+      {
+        "id": "mobile-shell-reference",
+        "status": "preserved_partial_shell",
+        "upstreamPaths": ["mobile/**"],
+        "localPaths": ["upstream/nirva-ai/mobile/**"],
+        "limitations": ["Configuration, API client, and authentication shell only; not a complete shippable app"]
+      },
+      {
+        "id": "nmd-sdks-reference",
+        "status": "preserved_reference_only",
+        "upstreamPaths": ["sdk/**"],
+        "localPaths": ["upstream/nirva-ai/sdk/**"],
+        "limitations": ["Clients require a compatible live NMD API"]
+      }
+    ],
+    "roadmap": [
+      {
+        "id": "advanced-ml",
+        "status": "preserved_exact_not_runtime_proof",
+        "upstreamPath": "ML_INTEGRATION.md",
+        "localPath": "upstream/nirva-ai/docs/roadmaps/ML_INTEGRATION.md"
+      },
+      {
+        "id": "multi-region",
+        "status": "preserved_exact_not_runtime_proof",
+        "upstreamPath": "MULTI_REGION_DEPLOYMENT.md",
+        "localPath": "upstream/nirva-ai/docs/roadmaps/MULTI_REGION_DEPLOYMENT.md"
+      },
+      {
+        "id": "kubernetes-autoscaling",
+        "status": "preserved_exact_not_runtime_proof",
+        "upstreamPath": "KUBERNETES_AUTOSCALING.md",
+        "localPath": "upstream/nirva-ai/docs/roadmaps/KUBERNETES_AUTOSCALING.md"
+      },
+      {
+        "id": "enterprise-features",
+        "status": "preserved_exact_not_runtime_proof",
+        "upstreamPath": "ENTERPRISE_FEATURES.md",
+        "localPath": "upstream/nirva-ai/docs/roadmaps/ENTERPRISE_FEATURES.md"
+      },
+      {
+        "id": "mobile-app",
+        "status": "preserved_exact_not_runtime_proof",
+        "upstreamPath": "MOBILE_APP.md",
+        "localPath": "upstream/nirva-ai/docs/roadmaps/MOBILE_APP.md"
+      }
+    ],
+    "missing": [
+      {
+        "id": "provider-translation-memory",
+        "status": "upstream_only_not_integrated",
+        "upstreamPaths": ["server/language/index.ts", "server/db/index.ts", "server/auth/index.ts", "server/providers/**"],
+        "reason": "The implementation depends on the Nirva AI Node/Express/SQLite/auth/provider runtime and cannot be copied safely into the Cloudflare D1 site as-is."
+      },
+      {
+        "id": "speech-to-text",
+        "status": "upstream_only_not_integrated",
+        "upstreamPaths": ["server/language/voice.ts"],
+        "reason": "Provider credentials, authenticated binary upload handling, limits, and storage policy are not configured in the active product."
+      },
+      {
+        "id": "nle-architecture-document",
+        "status": "upstream_only_documentation",
+        "upstreamPaths": ["docs/NLE_LANGUAGE_ENGINE_ARCHITECTURE.md"],
+        "reason": "Verified during audit but not copied because the product handoff and machine-readable inventory now record the relevant truth boundary."
+      },
+      {
+        "id": "nirva-ai-monolith",
+        "status": "intentionally_not_preserved",
+        "upstreamPaths": ["client/**", "server/** except selected media references", "shared/** except shared/media.ts", "deployment and operations files"],
+        "reason": "Nirva Media is a separate product repository; unrelated ecosystem, infrastructure, identity, memory, marketplace, and orchestration code remains in Nirva AI."
+      }
+    ]
+  },
+  "capabilityTruth": {
+    "completeUpstreamSource": "not_present",
+    "languageRegistry": "active",
+    "curatedStudioCopy": "active",
+    "scriptDetection": "active",
+    "intlLocalization": "active",
+    "providerTranslation": "integration_required",
+    "translationMemory": "integration_required",
+    "speechToText": "integration_required",
+    "upstreamStudioRuntime": "reference_only",
+    "upstreamMediaRuntime": "dependency_incomplete"
+  }
+}

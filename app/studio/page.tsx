@@ -41,6 +41,22 @@ type WorkspaceEntitlement = {
   status: string;
 };
 
+type LanguageCapabilities = {
+  registry: string;
+  curatedStudioCopy: string;
+  rtlLayout: string;
+  providerTranslation: string;
+  translationMemory: string;
+};
+
+const defaultLanguageCapabilities: LanguageCapabilities = {
+  registry: "active",
+  curatedStudioCopy: "active",
+  rtlLayout: "active",
+  providerTranslation: "integration_required",
+  translationMemory: "integration_required",
+};
+
 const artColors: Record<string, string> = {
   Instagram: "mint",
   Facebook: "blue",
@@ -90,21 +106,27 @@ export default function StudioPage() {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [languageCapabilities, setLanguageCapabilities] = useState(defaultLanguageCapabilities);
 
   useEffect(() => {
     let active = true;
-    Promise.all([fetch("/api/campaigns"), fetch("/api/entitlements")])
-      .then(async ([campaignsResponse, entitlementResponse]) => {
+    Promise.all([fetch("/api/campaigns"), fetch("/api/entitlements"), fetch("/api/languages")])
+      .then(async ([campaignsResponse, entitlementResponse, languagesResponse]) => {
         if (!campaignsResponse.ok || !entitlementResponse.ok) throw new Error("โหลด Workspace ไม่สำเร็จ");
-        return Promise.all([campaignsResponse.json(), entitlementResponse.json()]);
+        return Promise.all([
+          campaignsResponse.json(),
+          entitlementResponse.json(),
+          languagesResponse.ok ? languagesResponse.json() : Promise.resolve(null),
+        ]);
       })
-      .then(([campaignsData, entitlementData]) => {
+      .then(([campaignsData, entitlementData, languagesData]) => {
         if (active) {
           setRecentCampaigns(campaignsData.campaigns ?? []);
           const nextEntitlement = entitlementData.entitlement as WorkspaceEntitlement;
           setEntitlement(nextEntitlement);
           const allowedChannels = channelsForConnectors(nextEntitlement.connectorIds);
           setChannels((current) => current.filter((channel) => allowedChannels.includes(channel)));
+          if (languagesData?.capabilities) setLanguageCapabilities(languagesData.capabilities);
         }
       })
       .catch(() => {
@@ -225,9 +247,27 @@ export default function StudioPage() {
             <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); setGenerated(false); }} />
 
             <div className="field-row">
-              <div><label className="field-label" htmlFor="language">ภาษาหลัก · NLE {NIRVA_LANGUAGE_COUNT} ภาษา {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}</select></div>
+              <div><label className="field-label" htmlFor="language">ภาษาหลัก · NLE {NIRVA_LANGUAGE_COUNT} ภาษา {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} dir={selectedLanguage.rtl ? "rtl" : "ltr"} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}{item.rtl ? " · RTL" : ""}</option>)}</select></div>
               <div><label className="field-label" htmlFor="tone">น้ำเสียง</label><select id="tone" value={tone} onChange={(event) => { setTone(event.target.value); setGenerated(false); }}><option>อบอุ่นและมั่นใจ</option><option>มืออาชีพและกระชับ</option><option>สนุกและเป็นกันเอง</option><option>น่าเชื่อถือและจริงจัง</option></select></div>
             </div>
+
+            <section className="language-readiness" aria-labelledby="language-readiness-title">
+              <div className="language-readiness-heading">
+                <div><span>文</span><div><small>LANGUAGE ENGINE STATUS</small><strong id="language-readiness-title">21 ภาษาพร้อมใช้สร้างร่างใน Studio</strong></div></div>
+                <b>{selectedLanguage.nativeName} · {selectedLanguage.script}{selectedLanguage.rtl ? " · RTL" : ""}</b>
+              </div>
+              <div className="language-capability-row">
+                <span className={languageCapabilities.registry === "active" ? "ready" : "waiting"}><i /> Language registry</span>
+                <span className={languageCapabilities.curatedStudioCopy === "active" ? "ready" : "waiting"}><i /> Curated draft copy</span>
+                <span className={languageCapabilities.rtlLayout === "active" ? "ready" : "waiting"}><i /> Arabic &amp; Hebrew RTL</span>
+                <span className={languageCapabilities.providerTranslation === "active" ? "ready" : "waiting"}><i /> Provider Translation · {languageCapabilities.providerTranslation === "active" ? "พร้อมใช้" : "รอเชื่อม"}</span>
+                <span className={languageCapabilities.translationMemory === "active" ? "ready" : "waiting"}><i /> Translation Memory · {languageCapabilities.translationMemory === "active" ? "พร้อมใช้" : "รอเชื่อม"}</span>
+              </div>
+              <div className="language-list" aria-label="ภาษาที่รองรับทั้ง 21 ภาษา">
+                {NIRVA_LANGUAGES.map((item) => <span className={item.code === language ? "selected" : ""} dir={item.rtl ? "rtl" : "ltr"} key={item.code}>{item.nativeName}<small>{item.code.toUpperCase()}{item.rtl ? " · RTL" : ""}</small></span>)}
+              </div>
+              <p><strong>พร้อมใช้ตอนนี้:</strong> เลือกภาษาเพื่อสร้างร่างที่ผ่านการเตรียมข้อความตัวอย่างและจัดทิศทางตัวอักษรแล้ว · <strong>ยังรอเชื่อม:</strong> การแปลข้อความอิสระผ่าน Provider และ Translation Memory จึงยังไม่ควรนับเป็นการแปลอัตโนมัติแบบ Production</p>
+            </section>
 
             <span className="field-label">ช่องทาง</span>
             <div className="channel-picker">
@@ -263,7 +303,7 @@ export default function StudioPage() {
                 {posts.map((post) => (
                   <article className="post-card" key={post.id}>
                     <div className={`post-art ${artColors[post.channel] ?? "dark"}`}><span>N</span><small>{post.format}</small></div>
-                    <div className="post-content" dir={selectedLanguage.rtl ? "rtl" : "ltr"}><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
+                    <div className="post-content" lang={selectedLanguage.code} dir={selectedLanguage.rtl ? "rtl" : "ltr"}><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
                   </article>
                 ))}
                 {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีร่างคอนเทนต์</h3><p>เลือกช่องทางอย่างน้อยหนึ่งช่องทาง แล้วสร้างแคมเปญใหม่</p></div>}

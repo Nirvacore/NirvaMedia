@@ -59,8 +59,11 @@ reused.
 - Campaign Studio scheduling now creates a publish job and truthfully blocks it
   for authorization until a matching external account is connected
 - Active NLE adapter with the upstream 21-language registry, 12 writing
-  systems, curated Studio draft copy for all 21 languages, and RTL layout for
-  Arabic and Hebrew
+  systems, deterministic script detection, `Intl` localization, curated Studio
+  draft copy for all 21 languages, and RTL layout for Arabic and Hebrew
+- Machine-readable upstream audit at `docs/upstream-source-inventory.json` and
+  `/api/upstream-status`, explicitly separating executable references,
+  roadmaps, active adapters, and missing source
 - Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
   roadmaps preserved under the upstream snapshot
 
@@ -167,6 +170,15 @@ formats, limits, and errors.
 - Added `/api/languages` with explicit capability states. Provider translation
   and translation memory report `integration_required` rather than appearing
   live. Removed the unsupported 100+ language claim from the product page.
+- Added the provider-free portion of upstream `shared/language.ts` through the
+  active `lib/nle/localization.ts` adapter. Script detection and `Intl` number,
+  currency, date, timezone, and RTL formatting are active; the Node/Express
+  provider, translation-memory, and speech stack was deliberately not copied.
+- Added a reproducible upstream inventory after comparing all 437 source files
+  with the 94-file selective snapshot at commit `12b7034`. Ninety-three files
+  are exact source equivalents (including five relocated roadmaps), one is the
+  intentional snapshot README, and 343 upstream files remain outside the
+  product repository. `GET /api/upstream-status` exposes this truth boundary.
 - 2026-08-04: Added `/connections` Connection Center.
 - Added D1 tables for `connector_accounts`, `publish_jobs`, and
   `connector_events`, with workspace and scheduling indexes.

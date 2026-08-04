@@ -25,6 +25,12 @@ test("server-renders the Campaign Studio continuation", async () => {
   assert.match(page, /Generated content/);
   assert.match(page, /Nirva NLE registry connected/);
   assert.match(page, /NIRVA_LANGUAGES/);
+  assert.match(page, /fetch\("\/api\/languages"/);
+  assert.match(page, /21 ภาษาพร้อมใช้สร้างร่างใน Studio/);
+  assert.match(page, /Provider Translation ·/);
+  assert.match(page, /Translation Memory ·/);
+  assert.match(page, /dir=\{selectedLanguage\.rtl \? "rtl" : "ltr"\}/);
+  assert.match(page, /lang=\{selectedLanguage\.code\}/);
   assert.match(page, /fetch\("\/api\/campaigns"/);
   assert.match(page, /งานล่าสุด/);
 });
@@ -38,13 +44,16 @@ test("activates the upstream 21-language NLE registry without overstating transl
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
   ]);
 
-  const languageEntries = languages.match(/\{ code: "/g) ?? [];
-  assert.equal(languageEntries.length, 21);
+  const registryCodes = [...languages.matchAll(/\{ code: "([a-z]{2})"/g)].map((match) => match[1]);
+  const curatedCopyCodes = [...copy.matchAll(/^\s{2}([a-z]{2}): \{/gm)].map((match) => match[1]);
+  assert.equal(registryCodes.length, 21);
+  assert.deepEqual(curatedCopyCodes, registryCodes);
   assert.match(languages, /code: "ar"[\s\S]*rtl: true/);
   assert.match(languages, /code: "he"[\s\S]*rtl: true/);
   assert.match(copy, /Une idée pour chaque marché/);
   assert.match(copy, /فكرة واحدة لكل سوق/);
   assert.match(languageRoute, /providerTranslation: "integration_required"/);
+  assert.match(languageRoute, /translationMemory: "integration_required"/);
   assert.match(campaignsRoute, /isSupportedNirvaLanguage/);
   assert.match(campaignsRoute, /getLocalizedCampaignCopy/);
   assert.doesNotMatch(home, /100\+ languages|100\+<\/strong><span>ภาษา/);
