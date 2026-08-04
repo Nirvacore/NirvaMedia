@@ -179,6 +179,13 @@ formats, limits, and errors.
   are exact source equivalents (including five relocated roadmaps), one is the
   intentional snapshot README, and 343 upstream files remain outside the
   product repository. `GET /api/upstream-status` exposes this truth boundary.
+- A direct upstream test audit on 2026-08-04 reported 862 tests: 547 passed,
+  259 failed, and 56 skipped. The language suite passed 10/10, while the
+  publishing suite failed 37/37 and the ROI suite failed 36/36 because their
+  schema/runtime implementations are missing. Treat the older "360+ tests,
+  96% coverage, all passing" and "production-ready" statements as disproven;
+  Phases 13-17 are primarily roadmap documentation, with only a partial mobile
+  shell and selected executable components.
 - 2026-08-04: Added `/connections` Connection Center.
 - Added D1 tables for `connector_accounts`, `publish_jobs`, and
   `connector_events`, with workspace and scheduling indexes.
