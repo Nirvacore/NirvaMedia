@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-12",
+  "system": "Nirva Character Universe",
+  "sourceReference": "Nirva Media Creator DNA image supplied by the product owner",
+  "sharedDNA": {
+    "archetype": "friendly premium 3D chibi guide",
+    "corePalette": ["#050b23", "#5127a8", "#42c8ff", "#ff5dcf"],
+    "materials": ["luminous glass", "soft vinyl", "neon edge light"],
+    "rules": [
+      "one product has one primary mascot",
+      "each mascot has a distinct silhouette, role, prop, and accent color",
+      "all mascots share proportions, eye language, lighting, and rendering quality",
+      "mascots explain product purpose but never replace truthful product status"
+    ]
+  },
+  "assets": {
+    "mediaCreator": "/characters/nirva-media-creator-v1.png",
+    "founderLineup": "/characters/nirva-ecosystem-founders-v1.png"
+  },
+  "rolloutTruth": {
+    "demoActive": ["Nirva Media"],
+    "designReady": ["Nirva AI", "Nirva Cloud", "Nirva Connect", "Nirva Academy", "Nirva Marketplace", "Nirva Finance", "Nirva Gov"],
+    "conceptRegistered": ["NirvaCore", "NirvaCheck", "NirvaAudit", "NirvaDocs", "NirvaCompliance", "NirvaExecutive", "NirvaProcure", "NirvaVoice"]
+  }
+}

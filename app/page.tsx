@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 const channels = ["Facebook", "Instagram", "WhatsApp", "LINE", "YouTube", "TikTok", "WeChat", "Douyin", "X", "LinkedIn", "Telegram", "KakaoTalk"];
@@ -76,6 +77,7 @@ export default function Home() {
           <a href="#global">ตลาดทั่วโลก</a>
           <a href="#workflow">วิธีทำงาน</a>
           <a href="#language">ภาษา</a>
+          <a href="/characters">ตัวละคร</a>
           <a href="#contact">สำหรับองค์กร</a>
         </nav>
         <a className="nav-cta" href="/studio">เปิด Studio <span>↗</span></a>
@@ -144,6 +146,17 @@ export default function Home() {
       <section className="channel-strip" aria-label="ช่องทางที่รองรับ">
         <span>เผยแพร่จากที่เดียวไปยัง</span>
         <div>{channels.map((channel) => <b key={channel}>{channel}</b>)}</div>
+      </section>
+
+      <section className="character-home-section">
+        <div className="character-home-image"><Image src="/characters/nirva-media-creator-v1.png" width={1254} height={1254} unoptimized alt="Nirva Media Creator mascot holding a camera and microphone" /></div>
+        <div className="character-home-copy">
+          <span className="section-kicker light">NIRVA CHARACTER UNIVERSE</span>
+          <h2>ทุกโปรแกรมมี<br /><em>ตัวละครของตัวเอง</em></h2>
+          <p>Nirva Media คือ “ผู้สร้าง” ประจำ Ecosystem—ผมสีรุ้ง กล้อง และไมโครโฟนทำให้จดจำได้ทันที ขณะที่ทุกผลิตภัณฑ์ใช้ Character DNA เดียวกันเพื่อเชื่อมประสบการณ์ทั้งหมดให้เป็นโลกเดียว</p>
+          <div><span>16 characters registered</span><span>8 founding designs</span><span>1 verified demo</span></div>
+          <a className="button light-button" href="/characters">เปิด Character Universe <span>→</span></a>
+        </div>
       </section>
 
       <section className="global-atlas section" id="global">
@@ -221,7 +234,7 @@ export default function Home() {
         <div className="language-copy">
           <span className="section-kicker">NIRVA LANGUAGE ENGINE</span>
           <h2>ไม่ใช่แค่แปลภาษา<br /><em>แต่เข้าใจผู้คน</em></h2>
-          <p>Nirva Language Engine เปิดใช้ทะเบียน 21 ภาษาและรองรับหลายระบบอักษรใน Studio แล้ว ส่วนการแปลด้วยผู้ให้บริการและ Translation Memory อยู่ในขั้นเชื่อมระบบถัดไป</p>
+          <p>Nirva Language Engine เปิดใช้ทะเบียน 21 ภาษา รองรับหลายระบบอักษร และมี Translation Memory ใน Studio แล้ว ส่วนการแปลอัตโนมัติผ่าน Provider จะเปิดใช้เมื่อ Workspace มี Credential ที่ผ่านการตั้งค่า</p>
           <div className="language-stats"><div><strong>21</strong><span>ภาษาที่เปิดใช้</span></div><div><strong>12</strong><span>ระบบอักษร</span></div></div>
         </div>
       </section>

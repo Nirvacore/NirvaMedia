@@ -66,6 +66,9 @@ reused.
   roadmaps, active adapters, and missing source
 - D1 Translation Memory with workspace-scoped exact matching, hit tracking,
   provider-result persistence, and reviewed manual entries
+- Nirva Character Universe reference implementation: Nirva Media owns the
+  rainbow Creator mascot, the founding eight-character lineup is design-ready,
+  and a 16-product registry separates demo-active assets from registered concepts
 - Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
   roadmaps preserved under the upstream snapshot
 
@@ -159,6 +162,13 @@ formats, limits, and errors.
    and customer-facing connection onboarding.
 
 ## Recent implementation
+
+- 2026-08-12: Established the shared Nirva Character Universe. Added the
+  canonical Nirva Media Creator asset, founding ecosystem lineup, `/characters`
+  demo, typed registry, machine-readable registry, and cross-repository rollout
+  contract. Only Nirva Media is marked demo active; other characters retain
+  `design-ready` or `concept-registered` status until their own repositories
+  consume and verify approved assets.
 
 - 2026-08-04: Audited the original NLE source directly on
   `claude/nirva-media-nle-vision-h0v1z0`. Confirmed 21 languages, not 100+.
