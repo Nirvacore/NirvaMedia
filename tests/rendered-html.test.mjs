@@ -86,7 +86,14 @@ test("removes starter preview dependencies and keeps product metadata", async ()
   assert.match(layout, /images:\s*\[\{ url: "\/og\.png"/);
   assert.doesNotMatch(packageJson, /react-loading-skeleton/);
   assert.doesNotMatch(builtWrangler, /nodejs_compat/);
-  assert.deepEqual(await readdir(new URL("../app/_sites-preview/", import.meta.url)), []);
+  const previewDirectory = new URL("../app/_sites-preview/", import.meta.url);
+  await assert.doesNotReject(async () => {
+    try {
+      assert.deepEqual(await readdir(previewDirectory), []);
+    } catch (error) {
+      assert.equal(error.code, "ENOENT");
+    }
+  });
 });
 
 test("persists Studio, Product Fabric, and connector workflows with D1", async () => {
