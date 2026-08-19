@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "repository": "Nirvacore/NirvaMedia",
+  "auditedAt": "2026-08-19",
+  "auditedCommit": "336193e7dcf60089065f6bd6592f336c021b25a2",
+  "auditedSourceBranch": "codex/nirvamedia-web",
+  "documentationBranch": "agent/phase-0-source-audit-20260819",
+  "classification": "KEEP_PRODUCT_WITH_EXPLICIT_ADAPTERS",
+  "strategicRole": "independent media product consuming intelligence capabilities",
+  "evidenceRule": "source-backed; documentation alone is not implementation proof",
+  "safety": {
+    "businessCodeChanged": false,
+    "schemaMigrated": false,
+    "codeDeleted": false,
+    "secretsRotated": false,
+    "productionConfigurationChanged": false
+  },
+  "evidence": [
+    {
+      "path": "docs/NIRVA_MEDIA_PRODUCT_MEMORY.md",
+      "finding": "Dated truth boundary and implementation history."
+    },
+    {
+      "path": "db/schema.ts",
+      "finding": "Campaign, entitlement, connector, publish-job, event, and translation-memory schema."
+    },
+    {
+      "path": "lib/upstream-media-adapter.ts",
+      "finding": "Explicit adapter to preserved upstream logic."
+    },
+    {
+      "path": "upstream/nirva-ai",
+      "finding": "Read-only preserved source snapshot."
+    },
+    {
+      "path": "tests",
+      "finding": "Character, HTML, continuity, translation memory, and upstream audit tests."
+    },
+    {
+      "path": ".openai/hosting.json",
+      "finding": "Sites/D1 deployment declaration."
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "Campaign/product studio",
+      "status": "implemented",
+      "finding": "Persistent campaigns, channel drafts, scheduling status, and product entitlements exist."
+    },
+    {
+      "name": "Translation memory",
+      "status": "implemented",
+      "finding": "D1 exact matching and reviewed/provider result persistence exist."
+    },
+    {
+      "name": "Live publishing",
+      "status": "partial",
+      "finding": "Queue/account/audit records exist; OAuth, tokens, webhooks, retries, and live platform publishing are not connected."
+    },
+    {
+      "name": "AI media source",
+      "status": "partial",
+      "finding": "Selected upstream modules are adapted; preserved snapshot is incomplete by design."
+    }
+  ],
+  "gaps": [
+    "Provider-backed translation depends on server credential availability.",
+    "Live third-party account authorization and publishing are not implemented.",
+    "Customer identity, billing, contracts, and multi-workspace administration are incomplete.",
+    "Shared prompt/model/eval/citation governance should come from intelligence rather than product-local duplication."
+  ]
+}
