@@ -1,0 +1,85 @@
+---
+description: Documentation index — where to find everything in this repo
+globs: ["**/*.md", "docs/**"]
+alwaysApply: true
+---
+
+# Nirva Documentation Index
+
+When answering questions or implementing features, consult these docs:
+
+## Architecture & design
+
+| File | Content |
+|------|---------|
+| ARCHITECTURE.md | System overview, routing, voice, file map |
+| API.md | REST API contract (agents, chat, tasks, memory) |
+| DESIGN_SYSTEM.md | UI tokens, Minimal Garden theme |
+| AGENTS.md | Agent ecosystem + Cursor Cloud instructions |
+
+## Agents & organization
+
+| File | Content |
+|------|---------|
+| docs/AGENT_REGISTRY.md | Full 109 agent directory |
+| docs/NIRVA_ORGANIZATION_BLUEPRINT.md | 8 AI Companies structure |
+| docs/MODEL_ORCHESTRATION.md | ROUTER tiers, cost rules |
+| docs/VOICE_COMMANDS.md | Wake words, voice navigation keywords |
+
+## Ecosystem & products
+
+| File | Content |
+|------|---------|
+| docs/NIRVA_ECOSYSTEM.md | 13 Nirvacore products |
+| docs/DEMO.md | Demo hub feature guide |
+
+## Deploy & ops
+
+| File | Content |
+|------|---------|
+| docs/DEPLOY_NOW.md | Step-by-step production deploy |
+| docs/DEPLOY_NIRVA_ONE.md | Manus Space (ai.nirva.one) |
+| docs/DEPLOY_CONTABO.md | Contabo VPS |
+| DEPLOYMENT.md | General deployment guide |
+| CODE_FREEZE.md | Current freeze policy |
+| docs/CLAUDE_BRANCH_WARNING.md | Branch to avoid |
+| deploy/manus/README.md | Manus-specific notes |
+
+## Dev & contrib
+
+| File | Content |
+|------|---------|
+| README.md | Quick start |
+| CONTRIBUTING.md | Contribution guidelines |
+| docs/START_TH.md | Thai getting started |
+| docs/I18N_GUIDE.md | 17 locale translation guide |
+| docs/CURSOR_SETUP.md | Cursor IDE + MCP + Obsidian setup |
+| ROADMAP.md | Future plans |
+
+## Cursor IDE context
+
+| File | Content |
+|------|---------|
+| .cursorrules | Master universal context |
+| .cursor/rules/*.mdc | Domain-specific rules (auto-loaded by glob) |
+| .cursor/mcp.json | MCP server config |
+
+## Key version milestones
+
+- v0.14.4 — Cursor IDE + MCP + Obsidian
+- v0.14.3 — CI fix + Manus publish config
+- v0.14.2 — SQLite path hotfix + 0.0.0.0 bind
+- v0.14.0 — ROUTER live in Chat + Tower
+- v0.13.0 — Model orchestration system
+- v0.12.0 — Contabo deploy + Docker
+- v0.11.0 — OpenAPI + Storybook + classifier
+- v0.10.0 — Multi-tenant + Plugins
+- v0.9.0 — Organization OS + 8 AI Companies
+
+## When stuck
+
+1. Search codebase with agent name or route path
+2. Read relevant doc from this index
+3. Check `server/api.ts` for live API implementation
+4. Run `pnpm test` to verify assumptions
+5. Check CHANGELOG for recent breaking changes

@@ -73,6 +73,9 @@ reused.
 - Source Continuity registry and `/continuity` page connecting the complete
   Claude checkout, preserved snapshot, active adapters, user references, and
   Codex-generated assets with commit and SHA-256 provenance
+- Complete 437-file Claude source preservation under
+  `upstream/nirva-ai-complete`, with a searchable K-Hub structure explorer and
+  per-file SHA-256 records in `docs/complete-source-manifest.json`
 - Claude `shared/media.ts` now runs through `lib/upstream-media-adapter.ts` in
   the active Campaign API and post approval/scheduling workflow
 - Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
@@ -173,6 +176,9 @@ formats, limits, and errors.
   checkout at `../nirva-media-source`. Added a machine-readable provenance
   registry, copied the original PWA icons/screenshots byte-for-byte, and exposed
   `/continuity` plus `/api/source-provenance`.
+- 2026-08-19: Preserved all 437 tracked Claude files in the NirvaMedia GitHub
+  repository and exposed the complete searchable structure, ten original image
+  records, and root integrity checksum through K-Hub.
 - Replaced duplicated Campaign Studio rules with a direct adapter over Claude
   `shared/media.ts`. Platform length/hashtag adaptation and the original
   `draft → review → approved → scheduled` transition flow now execute in the

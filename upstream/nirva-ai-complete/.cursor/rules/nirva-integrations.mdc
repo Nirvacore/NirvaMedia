@@ -1,0 +1,118 @@
+---
+description: External integrations — MCP, Obsidian, Ollama, Qdrant, n8n, WebSocket
+globs: ["server/mcp/**", "server/obsidian/**", "server/memory/**", "server/orchestration/**", "server/ws/**", "server/n8n/**", "server/router/**", ".cursor/mcp.json"]
+alwaysApply: false
+---
+
+# Nirva Integrations
+
+## MCP Server (Cursor IDE)
+
+**File:** `server/mcp/index.ts`
+**Start:** `pnpm mcp` or via `.cursor/mcp.json`
+**Protocol:** stdio JSON-RPC 2.0 (MCP 2024-11-05)
+
+### Tools
+
+| Tool | Calls | Timeout |
+|------|-------|---------|
+| chat_with_agent | POST /api/chat | 120s |
+| search_memory | POST /api/memory/search | 15s |
+| list_tasks | GET /api/tasks | 5s |
+| list_agents | local AGENTS[] filter | instant |
+| check_infrastructure | ping Ollama/Qdrant/n8n | 3s each |
+| search_obsidian | POST /api/obsidian/search | 10s |
+
+### Env vars
+
+- `NIRVA_URL` — API base (default http://localhost:3000)
+- `OBSIDIAN_URL` — default http://localhost:27124
+- `OBSIDIAN_API_KEY` — optional bearer token
+
+## Obsidian Local REST API
+
+**File:** `server/obsidian/index.ts`
+**Plugin:** "Local REST API" in Obsidian community plugins
+**Default port:** 27124
+
+### Functions
+
+- `isObsidianRunning(url, apiKey)` — health check
+- `listVaultFiles()` — all .md paths
+- `readNote(path)` — content + tag extraction
+- `writeNote(path, content)` — PUT markdown
+- `appendToNote(path, content)` — POST append
+- `searchVault(query)` — full-text via `/search/simple/`
+- `syncVaultToMemory({ agent, maxFiles })` — index vault → Qdrant
+
+### UI flow
+
+1. Settings → Integrations → URL + API key → Test
+2. Memory page → Obsidian section → search / Sync→Qdrant
+3. MCP `search_obsidian` tool for Cursor
+
+## Ollama
+
+**Default:** http://localhost:11434
+**API routes:** `GET /api/ollama/models`
+**Chat:** `POST /api/generate` with model from settings or ROUTER
+**Embeddings:** `server/memory/embeddings.ts` — nomic-embed-text or fallback
+
+Settings: `ollamaUrl`, `defaultModel` in NirvaSettings
+
+## Qdrant (vector memory)
+
+**Default:** http://localhost:6333
+**Files:** `server/memory/qdrant.ts`, `server/memory/index.ts`
+**Collection:** per-agent or shared (see memory module)
+**Fallback:** SQLite stores memories when Qdrant offline
+
+API: `/api/memory/*`, stats at `/api/memory/stats`
+
+## n8n (workflows)
+
+**Default:** http://localhost:5678
+**File:** `server/n8n/index.ts`
+**API:** `/api/workflows`, `/api/workflows/templates`, `POST /api/workflows/:id/run`
+**Health:** `/healthz`
+
+## WebSocket (real-time)
+
+**File:** `server/ws/index.ts`
+**Endpoint:** `ws://host/ws` (same port as HTTP)
+
+### Broadcast functions
+
+```typescript
+broadcast(event, data)           // generic
+broadcastTaskUpdate(task)        // single task
+broadcastTasksSummary()          // refresh task counts
+broadcastAgentStats(stats)       // agent activity
+broadcastInfrastructure(status)  // service health
+```
+
+### Client consumption
+
+`LiveContext.tsx` — auto-reconnect, parses JSON messages by `type` field.
+
+## Model ROUTER (orchestration)
+
+**Shared rules:** `shared/model-orchestration.ts`
+**Server tracking:** `server/orchestration/index.ts` — SQLite usage log
+**Tiers:** free → low_cost → premium
+**Scoring dimensions:** complexity, importance, speed, costSensitivity, privacy
+
+Settings gate: `useOrchestration`, `maxPremiumPercent`, `preferSelfHosted`
+
+## Infrastructure check pattern
+
+```typescript
+async function checkService(url: string, path: string): Promise<"running" | "unavailable"> {
+  try {
+    const r = await fetch(`${url}${path}`, { signal: AbortSignal.timeout(3000) });
+    return r.ok ? "running" : "unavailable";
+  } catch { return "unavailable"; }
+}
+```
+
+Ollama: `/api/tags` · Qdrant: `/collections` · n8n: `/healthz`

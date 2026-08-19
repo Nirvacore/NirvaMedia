@@ -26,3 +26,40 @@ test("reuses the preserved Claude media core through an explicit active adapter"
   assert.match(posts, /canMoveContentStatus/);
   assert.match(continuityPage, /CLAUDE × CODEX × JIDLADA/);
 });
+
+test("preserves and indexes the complete 437-file Claude source", async () => {
+  const [manifest, registry, explorer, api] = await Promise.all([
+    readFile(new URL("../docs/complete-source-manifest.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("../docs/source-provenance-registry.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(new URL("../app/continuity/CompleteSourceExplorer.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/source-provenance/route.ts", import.meta.url), "utf8"),
+  ]);
+
+  assert.equal(manifest.totals.files, 437);
+  assert.equal(manifest.totals.images, 10);
+  assert.equal(manifest.files.length, 437);
+  assert.equal(manifest.source.commit, "12b703434d724b1aff04675602d52356ee9c2198");
+  assert.equal(registry.sources.find((source) => source.id === "claude-full-source").rootChecksum, manifest.integrity.rootChecksum);
+  assert.match(explorer, /ทุกไฟล์ที่ Claude สร้าง/);
+  assert.match(api, /completeSource/);
+
+  await Promise.all(manifest.files.map(async (file) => {
+    const sourceUrl = new URL(`../upstream/nirva-ai-complete/${file.path}`, import.meta.url);
+    const source = await readFile(sourceUrl);
+    assert.equal(source.byteLength, file.bytes, file.path);
+    assert.equal(sha256(source), file.sha256, file.path);
+  }));
+
+  const claudeImages = registry.sources
+    .find((source) => source.id === "claude-original-pwa-artifacts")
+    .assets.map((asset) => ({ ...asset, path: `../public/upstream/claude-icons/${asset.file}` }));
+  const characterImages = registry.sources
+    .filter((source) => source.publicPath && source.sha256)
+    .map((source) => ({ path: `../${source.publicPath}`, sha256: source.sha256 }));
+  const imageVault = [...claudeImages, ...characterImages];
+  assert.equal(imageVault.length, 13);
+  await Promise.all(imageVault.map(async (asset) => {
+    const image = await readFile(new URL(asset.path, import.meta.url));
+    assert.equal(sha256(image), asset.sha256, asset.path);
+  }));
+});

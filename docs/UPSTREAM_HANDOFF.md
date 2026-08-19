@@ -2,15 +2,18 @@
 
 ## Canonical full Claude checkout
 
-The complete Claude source checkout is available beside this product at
-`../nirva-media-source`, pinned to commit
-`12b703434d724b1aff04675602d52356ee9c2198`. Use it for audits and for selecting
-the next upstream module to adapt. Do not edit it from the Nirva Media product
-workflow.
+The complete Claude source is preserved byte-for-byte inside this repository at
+`upstream/nirva-ai-complete`, pinned to commit
+`12b703434d724b1aff04675602d52356ee9c2198`. All 437 tracked files are indexed
+in `docs/complete-source-manifest.json` with per-file SHA-256 checksums and one
+root checksum for the full structure. Treat this directory as read-only and
+extract active behavior through explicit adapters.
 
 The active product now records every adopted module or image in
 `docs/source-provenance-registry.json` and exposes that registry at
 `GET /api/source-provenance`.
+The `/continuity` K-Hub view provides a searchable structure explorer for all
+437 files and all ten original image artifacts.
 
 ## What was preserved in the product repository
 
@@ -51,8 +54,9 @@ The 2026-08-04 source audit compared commit
 The source branch contains 437 non-Git files; the snapshot contains 94. Of
 those, 88 match at the same path and byte content, five roadmap files match
 byte-for-byte at their documented relocated paths, and the snapshot README is
-intentionally different. The remaining 343 upstream files are not preserved
-locally. The machine-readable record is `docs/upstream-source-inventory.json`
+intentionally different. That legacy selective snapshot still omits 343 files,
+while `upstream/nirva-ai-complete` preserves all 437. The machine-readable record
+is `docs/upstream-source-inventory.json`
 and is exposed by `GET /api/upstream-status`.
 
 ## What Codex added afterward
@@ -81,6 +85,8 @@ and is exposed by `GET /api/upstream-status`.
   executes the original platform text rules and content status transitions
 - A Source Continuity page and registry that keep Claude, Codex, and user-owned
   image/code provenance separate while showing where each artifact is active
+- A complete GitHub preservation of all 437 Claude files plus a searchable
+  K-Hub structure explorer and integrity manifest
 
 All future extraction from the upstream snapshot should happen through an
 explicit adapter or package so the preserved source remains unchanged.

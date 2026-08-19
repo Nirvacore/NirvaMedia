@@ -1,0 +1,207 @@
+# Alert rules for NMD Platform
+
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          (sum(rate(http_request_total{status=~"5.."}[5m])) by (service))
+          /
+          (sum(rate(http_request_total[5m])) by (service)) > 0.05
+        for: 5m
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is above 5% for {{ $labels.service }}"
+          severity: critical
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        annotations:
+          summary: "High request latency"
+          description: "95th percentile latency is above 500ms"
+          severity: warning
+
+      - alert: HighConcurrency
+        expr: |
+          http_requests_in_flight > 1000
+        for: 2m
+        annotations:
+          summary: "High number of concurrent requests"
+          description: "More than 1000 requests in flight"
+          severity: warning
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      - alert: DatabaseDown
+        expr: |
+          pg_up == 0
+        for: 1m
+        annotations:
+          summary: "PostgreSQL database down"
+          description: "PostgreSQL is not responding"
+          severity: critical
+
+      - alert: DatabaseConnectionPoolExhausted
+        expr: |
+          pg_stat_activity_count > 80
+        for: 2m
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "More than 80 connections in use"
+          severity: warning
+
+      - alert: SlowQueries
+        expr: |
+          rate(pg_stat_statements_mean_time[5m]) > 1000
+        for: 5m
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query time is above 1 second"
+          severity: warning
+
+      - alert: DatabaseDiskFull
+        expr: |
+          pg_database_size_bytes / pg_tablespace_size_bytes > 0.9
+        for: 5m
+        annotations:
+          summary: "Database disk usage high"
+          description: "Database is using more than 90% of disk space"
+          severity: critical
+
+  - name: cache_alerts
+    interval: 30s
+    rules:
+      - alert: RedisDown
+        expr: |
+          redis_up == 0
+        for: 1m
+        annotations:
+          summary: "Redis cache down"
+          description: "Redis is not responding"
+          severity: critical
+
+      - alert: LowCacheHitRate
+        expr: |
+          rate(redis_keyspace_hits_total[5m])
+          /
+          (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m])) < 0.5
+        for: 10m
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is below 50%"
+          severity: warning
+
+      - alert: RedisMemoryUsage
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.85
+        for: 5m
+        annotations:
+          summary: "Redis memory usage high"
+          description: "Redis is using more than 85% of allocated memory"
+          severity: warning
+
+  - name: system_alerts
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 0.8
+        for: 5m
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80%"
+          severity: warning
+
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85%"
+          severity: warning
+
+      - alert: DiskSpaceRunningOut
+        expr: |
+          (node_filesystem_avail_bytes{fstype!~"tmpfs"} / node_filesystem_size_bytes) < 0.1
+        for: 5m
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is below 10%"
+          severity: critical
+
+      - alert: HighDiskIOWait
+        expr: |
+          avg(rate(node_cpu_seconds_total{mode="iowait"}[5m])) by (instance) > 0.3
+        for: 5m
+        annotations:
+          summary: "High disk I/O wait"
+          description: "Disk I/O wait is above 30%"
+          severity: warning
+
+  - name: application_alerts
+    interval: 30s
+    rules:
+      - alert: HighMemoryLeakSuspicion
+        expr: |
+          rate(go_memstats_heap_alloc_bytes[1h]) > 0
+        for: 1h
+        annotations:
+          summary: "Possible memory leak detected"
+          description: "Heap memory allocation continuously increasing"
+          severity: warning
+
+      - alert: PanicRecovery
+        expr: |
+          rate(panic_total[5m]) > 0
+        for: 1m
+        annotations:
+          summary: "Application panic detected"
+          description: "Application has panicked"
+          severity: critical
+
+      - alert: AuthenticationFailures
+        expr: |
+          rate(auth_failures_total[5m]) > 10
+        for: 5m
+        annotations:
+          summary: "High authentication failure rate"
+          description: "More than 10 auth failures per second"
+          severity: warning
+
+      - alert: APIGatewayDown
+        expr: |
+          up{job="nmd-api"} == 0
+        for: 1m
+        annotations:
+          summary: "API Gateway is down"
+          description: "API Gateway health check failing"
+          severity: critical
+
+  - name: business_alerts
+    interval: 1m
+    rules:
+      - alert: ZeroThroughput
+        expr: |
+          increase(http_request_total[5m]) == 0
+        for: 5m
+        annotations:
+          summary: "No requests being processed"
+          description: "API is receiving zero requests"
+          severity: critical
+
+      - alert: HighErrorBudgetBurn
+        expr: |
+          (
+            sum(rate(http_request_total{status=~"5.."}[30m])) by (service) / 
+            sum(rate(http_request_total[30m])) by (service)
+          ) > 0.05
+        for: 10m
+        annotations:
+          summary: "Error budget burning quickly"
+          description: "Error rate exceeds SLO for {{ $labels.service }}"
+          severity: warning

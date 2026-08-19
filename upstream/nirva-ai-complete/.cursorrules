@@ -1,0 +1,263 @@
+# Nirva OS — Universal Cursor Context
+
+> **You are working inside Nirva AI Core** — the control tower of the Nirvacore ecosystem.
+> Production target: **https://ai.nirva.one** · Current API version: **0.16.0**
+> Repo: https://github.com/Nirvacore/nirva-AI · Package: `nirva-dashboard`
+
+---
+
+## Vision
+
+Nirva is an **AI Company Operating System** evolving into **Nirva AI Workspace** — an AI Brain Marketplace + Agent Workforce + Executive Dashboard + Coding Workspace. See `docs/NIRVA_BRAIN_OS.md`.
+
+**Core pipeline:**
+```
+User → DESK (intent) → Agent Router → ROUTER (model tier) → Agent + Model → Plugins/Memory → REPORT
+```
+
+---
+
+## Stack (v0.14.4)
+
+| Layer | Tech |
+|-------|------|
+| Client | React 19, Vite 7, Tailwind CSS 4, Wouter, Sonner, Lucide, shadcn/ui (Radix) |
+| Server | Express, better-sqlite3, WebSocket (`ws`) |
+| AI | Ollama (LLM), Qdrant (vectors), n8n (workflows) |
+| Shared | TypeScript monolith — `shared/` imported by client + server |
+| Tooling | Vitest (56 unit), Playwright (24 e2e), Storybook, OpenAPI/Swagger |
+| IDE | Cursor rules + MCP stdio server (`server/mcp/index.ts`) |
+
+**Path aliases:** `@/*` → `client/src/*` · `@shared/*` → `shared/*`
+
+---
+
+## Repository map (every important path)
+
+```
+client/src/
+  App.tsx              Routes + providers (Theme, Language, Live, Auth, Tenant)
+  pages/               One file per route (see Routes below)
+  components/          Sidebar, CommandPalette, LiveIndicator, ui/* (shadcn)
+  contexts/            LiveContext, AuthContext, TenantContext, Theme, Language
+  hooks/               useSettings, useTTS, useVoiceNavigation, useLive
+  lib/api.ts           ALL client→server fetch (use apiFetch helper)
+  lib/i18n.ts          17 locales
+
+server/
+  index.ts             HTTP server + static + WS init
+  api.ts               ALL REST routes (createApiRouter)
+  db/index.ts          SQLite persistence
+  memory/              Qdrant RAG + embeddings
+  obsidian/            Obsidian Local REST API client
+  orchestration/       Model ROUTER usage tracking
+  router/              Intent classifier + agent router
+  ws/index.ts          WebSocket broadcast
+  mcp/index.ts         MCP stdio server for Cursor
+  auth/                OAuth + demo auth
+  tenants/ plugins/ marketplace/ reports/ ecosystem/ n8n/
+  middleware/          security, logger, CORS
+  openapi/             spec + Swagger UI
+
+shared/
+  agents.ts            109 agents (name, role, tier, category)
+  agent-prompts.ts     System prompts per agent
+  agent-details.ts     Extended profiles
+  organization.ts      8 AI Companies blueprint
+  model-orchestration.ts  ROUTER tiers + model catalog
+  ecosystem.ts         13 Nirvacore products
+  settings.ts          NirvaSettings + localStorage
+  tenants.ts plugins.ts marketplace.ts permissions.ts
+
+deploy/
+  manus/start.sh       Manus Space production start
+  contabo/deploy.sh    VPS deploy script
+
+docs/                  DEPLOY_*, AGENT_REGISTRY, MODEL_ORCHESTRATION, etc.
+env/                   ai.nirva.one.env.example, contabo.prod.env.example
+scripts/               setup, verify-production, manus-publish-config
+e2e/                   Playwright smoke tests
+.cursor/               mcp.json + rules/*.mdc
+```
+
+---
+
+## Client routes (Wouter)
+
+| Path | Page | Purpose |
+|------|------|---------|
+| `/` | Home | Command Center dashboard |
+| `/demo` | Demo | Feature showcase hub |
+| `/ecosystem` | Ecosystem | 13 Nirvacore products health |
+| `/organization` | Organization | 8 AI Companies org chart |
+| `/orchestration` | Orchestration | Model ROUTER cost + tiers |
+| `/brains` | Brains | AI Brain Marketplace + Brain Router |
+| `/chat` | Chat | Agent chat + ROUTER live |
+| `/memory` | Memory | Qdrant RAG + Obsidian vault |
+| `/workflows` | Workflows | n8n templates + run |
+| `/tasks` | Tasks | Task queue CRUD |
+| `/reports` | Reports | Agent output reports |
+| `/voice` | Voice | Wake word + TTS + nav |
+| `/mindmap` | MindMap | Agent relationship graph |
+| `/agents` | Agents | 109 agent directory |
+| `/agents/:name` | AgentDetail | Single agent profile |
+| `/marketplace` | Marketplace | Agent skill marketplace |
+| `/plugins` | Plugins | Multi-tenant plugin system |
+| `/docs` | Docs | In-app API docs link |
+| `/files` | Files | File browser (planned) |
+| `/terminal` | Terminal | CLI shell (planned) |
+| `/settings` | Settings | LLM, API keys, Integrations, Voice |
+
+Layout: fixed Sidebar 72px (224px on hover) + `main.ml-[72px]`
+
+---
+
+## API routes (Express `/api/*`)
+
+**Health:** `GET /health` `GET /metrics` `GET /system/status`
+**Auth:** `GET /auth/me` `GET /auth/login` `POST /auth/demo-login` `POST /auth/logout` `GET /oauth/callback`
+**Docs:** `GET /openapi.json` `GET /docs`
+**Tenants:** `GET /tenants` `GET /tenants/current` `GET /tenants/:id` `POST /tenants`
+**Plugins:** `GET /plugins` `GET /plugins/agent/:agentName` `POST /plugins/install` `PATCH /plugins/:id` `POST /plugins/:id/invoke`
+**Organization:** `GET /organization` `GET /organization/router` `GET /permissions`
+**Router:** `GET /router/classifier` `POST /router/analyze` `POST /router/execute`
+**Orchestration:** `GET /orchestration` `GET /orchestration/cost` `GET /orchestration/recent` `POST /orchestration/route` `POST /orchestration/route-pipeline`
+**Agents:** `GET /agents` `GET /agents/:name` `PATCH /agents/:name` `GET /agents/stats`
+**Chat:** `POST /chat` `GET /chat/history` `POST /chat/tower` (Control Tower multi-agent)
+**Tasks:** `GET /tasks` `POST /tasks` `PATCH /tasks/:id` `POST /tasks/:id/retry` `POST /tasks/:id/pause` `DELETE /tasks/:id`
+**Memory:** `GET /memory` `POST /memory` `POST /memory/search` `DELETE /memory/:id` `GET /memory/stats`
+**Obsidian:** `GET /obsidian/status` `GET /obsidian/notes` `POST /obsidian/sync` `POST /obsidian/search` `POST /obsidian/write`
+**Marketplace:** `GET /marketplace` `GET /marketplace/stats` `GET /marketplace/:id` `POST /marketplace` `POST /marketplace/import-json` `POST /marketplace/:id/import` `POST /marketplace/:id/rate` `GET /marketplace/export/:agentName`
+**Reports:** `GET /reports`
+**Ecosystem:** `GET /ecosystem` `GET /ecosystem/apps` `GET /ecosystem/:id`
+**Workflows:** `GET /workflows` `GET /workflows/templates` `POST /workflows/:id/run`
+**Ollama:** `GET /ollama/models`
+
+WebSocket: `ws://host/ws` — events: `connected`, `agent_stats`, `tasks`, `infrastructure`, `task_update`, `system_alert`
+
+---
+
+## 109 Agents — categories (14)
+
+Core Control Tower · Finance & Operations · Sales & Procurement · DESK Family · Operations & Quality · Teaching & Knowledge · Specialized Roles · Best Investigation · NIRVA TECH · MU UNIVERSE · Investment & Legal · Real-time Data · Media & Content · Teacher Module
+
+**Control Tower:** DESK (Chief of Staff), FLOW (Ops), SAGE (Strategy), ROUTER (Model Manager — virtual)
+**Key specialists:** CODE, ARCH, PIXEL, REACH, PRICE, GROW, BLOOM, VOICE, WAVE, COIN, CARE, TEACH, GATHER, SEAL, BULL, RAG-BUILDER, SHIP, GUARD, READ, STAMP, WIN
+
+**Tiers:** `self-hosted` | `hybrid` | `cloud`
+**Registry:** `shared/agents.ts` · **Prompts:** `shared/agent-prompts.ts` — add agent = both files
+
+---
+
+## 8 AI Companies (Organization)
+
+Defined in `shared/organization.ts` → `AI_COMPANIES[]`:
+software · commerce · media · service · business-support · knowledge · investment-legal · (+ control tower)
+
+API: `GET /api/organization` renders full org tree from existing 109 agents (no new agents created).
+
+---
+
+## Model ROUTER (Orchestration)
+
+`shared/model-orchestration.ts` + `server/orchestration/`
+**Tiers:** `free` (Ollama OSS) · `low_cost` · `premium` (cloud APIs)
+**Settings:** `useOrchestration`, `maxPremiumPercent`, `preferSelfHosted` in NirvaSettings
+Live in: Chat, Control Tower (`/chat/tower`), Orchestration page, Home cost widget
+
+---
+
+## Infrastructure defaults
+
+| Service | URL | Env var |
+|---------|-----|---------|
+| Nirva API | http://localhost:3000 | `PORT`, `NIRVA_URL` (MCP) |
+| Ollama | http://localhost:11434 | `VITE_OLLAMA_URL`, settings.ollamaUrl |
+| Qdrant | http://localhost:6333 | `VITE_QDRANT_URL`, settings.qdrantUrl |
+| n8n | http://localhost:5678 | `VITE_N8N_URL`, settings.n8nUrl |
+| Obsidian | http://localhost:27124 | settings.obsidianUrl + obsidianApiKey |
+| SQLite | ./data/nirva.db | `DATABASE_PATH` |
+
+---
+
+## MCP Server (Cursor IDE)
+
+Config: `.cursor/mcp.json` → `npx tsx server/mcp/index.ts`
+**Tools:** chat_with_agent · search_memory · list_tasks · list_agents · check_infrastructure · search_obsidian
+Run: `pnpm mcp` (API must be up at NIRVA_URL)
+
+---
+
+## Nirvacore Ecosystem (13 products)
+
+`shared/ecosystem.ts` → nirva-ai (control tower), Nirvaprocure, Nirvasell, NirvaMedia, NirvaCare, NirvaCoin, NirvaLegal, NirvaTeach, NirvaFlow, NirvaGuard, NirvaData, NirvaVoice, NirvaCloud
+Page: `/ecosystem` · API: `/api/ecosystem`
+
+---
+
+## Dev commands
+
+```bash
+pnpm install
+pnpm dev          # Vite + API :3000
+pnpm go           # setup + dev
+pnpm check        # tsc --noEmit
+pnpm test         # 56 unit tests — MUST pass
+pnpm test:e2e     # 24 Playwright tests
+pnpm build        # vite + esbuild server
+pnpm start        # production
+pnpm mcp          # MCP stdio server
+pnpm manus:config # print Manus deploy config
+bash scripts/verify-production.sh https://ai.nirva.one
+```
+
+---
+
+## Code rules (strict)
+
+1. **Minimize scope** — smallest correct diff; don't refactor unrelated code
+2. **No `any`** — proper TypeScript types always
+3. **Client fetch** → `client/src/lib/api.ts` (not raw fetch in pages except Settings/Obsidian quick test)
+4. **Server routes** → `server/api.ts` inside `createApiRouter()`
+5. **DB** → `server/db/index.ts` only
+6. **Memory** → `server/memory/index.ts`
+7. **New agent** → `shared/agents.ts` + `shared/agent-prompts.ts` + test in `registry.test.ts`
+8. **Task mutations** → call `broadcastTasksSummary()` from `server/ws/index.ts`
+9. **After changes** → `pnpm check && pnpm test`
+10. **Comments** — only for non-obvious WHY
+11. **Match existing style** — naming, imports, Tailwind patterns
+
+---
+
+## Git & deploy policy
+
+- **Production branch:** `main` (current v0.14.4)
+- **DO NOT deploy** `claude/pensive-meitner-befe4h` — see `docs/CLAUDE_BRANCH_WARNING.md`
+- **Code freeze:** `CODE_FREEZE.md` — hotfix/deploy only until `curl /api/health` returns 0.14.x on ai.nirva.one
+- **Manus deploy:** `pnpm manus:config` → Build: `pnpm install --frozen-lockfile && pnpm build` · Start: `bash deploy/manus/start.sh`
+- **Contabo deploy:** `bash deploy/contabo/deploy.sh`
+- **Env template:** `env/ai.nirva.one.env.example`
+
+---
+
+## Key docs (read when relevant)
+
+| Doc | Topic |
+|-----|-------|
+| ARCHITECTURE.md | System design |
+| API.md | API contract |
+| AGENTS.md | Agent ecosystem + Cursor Cloud |
+| docs/AGENT_REGISTRY.md | Full 109 agent list |
+| docs/MODEL_ORCHESTRATION.md | ROUTER details |
+| docs/NIRVA_ORGANIZATION_BLUEPRINT.md | 8 companies |
+| docs/NIRVA_ECOSYSTEM.md | Product integrations |
+| docs/DEPLOY_NOW.md | Production deploy steps |
+| CODE_FREEZE.md | Feature freeze status |
+| CHANGELOG.md | Version history |
+
+---
+
+## Settings (NirvaSettings)
+
+`shared/settings.ts` → persisted localStorage via `loadClientSettings()` / `saveSettings()`
+Fields: ollamaUrl, defaultModel, qdrantUrl, n8nUrl, useOrchestration, maxPremiumPercent, preferSelfHosted, ttsEnabled, ttsSpeed, wakeWord, notifyOnComplete, notifyOnError, obsidianUrl, obsidianApiKey, useObsidian

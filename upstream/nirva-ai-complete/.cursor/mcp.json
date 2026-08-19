@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "nirva": {
+      "command": "npx",
+      "args": ["tsx", "server/mcp/index.ts"],
+      "env": {
+        "NIRVA_URL": "http://localhost:3000",
+        "OBSIDIAN_URL": "http://localhost:27124",
+        "OBSIDIAN_API_KEY": ""
+      }
+    }
+  }
+}

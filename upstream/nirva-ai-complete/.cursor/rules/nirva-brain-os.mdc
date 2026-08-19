@@ -1,0 +1,55 @@
+---
+description: Nirva AI Brain OS — marketplace, global providers, brain router, pricing
+globs: ["shared/brains.ts", "docs/NIRVA_BRAIN_OS.md", "client/src/pages/Brains.tsx", "server/api.ts"]
+alwaysApply: false
+---
+
+# Nirva AI Brain Operating System
+
+## Vision
+
+Nirva AI Workspace = **AI Brain Marketplace** + **Agent Workforce** + **Executive Dashboard** + **Coding Workspace**
+
+Not a chatbot. An operating system for AI-era work.
+
+## Core concepts
+
+| Concept | File | Description |
+|---------|------|-------------|
+| Brain Category | `shared/brains.ts` | CEO, CTO, Developer, Marketing, Data, Voice, Vision |
+| AI Brain | `AI_BRAINS[]` | Marketplace item — category + agents + models + plan |
+| Global Provider | `GLOBAL_PROVIDERS[]` | OpenAI, DeepSeek, Mistral, Qwen, etc. by region |
+| Brain Router | `planBrainTeam(message)` | Intent → brain categories → agent team |
+| Model ROUTER | `shared/model-orchestration.ts` | Existing — picks model tier within brain |
+| Pricing | `PRICING_PLANS` | free (OSS) / pro (per-brain) / enterprise |
+
+## Pipeline
+
+```
+User → DESK (intent) → Brain Router (planBrainTeam) → Model ROUTER → Agent Team → Report
+```
+
+## API
+
+- `GET /api/brains?plan=free|pro|enterprise`
+- `GET /api/brains/categories`
+- `GET /api/brains/providers?region=usa`
+- `GET /api/brains/pricing`
+- `POST /api/brains/plan` `{ message }` → BrainTeamPlan
+
+## UI
+
+- `/brains` — Brain Marketplace + router demo
+- Future: Morning Briefing on Home, `/workspace` coding pipeline
+
+## When adding a brain
+
+1. Add to `BRAIN_CATEGORIES` if new category
+2. Add `AiBrain` entry to `AI_BRAINS[]`
+3. Add intent rule to `INTENT_RULES` if new use case
+4. Map to existing Nirva agents (don't create duplicate agents)
+5. Test in `shared/__tests__/brains.test.ts`
+
+## Full spec
+
+Read `docs/NIRVA_BRAIN_OS.md` before implementing v0.16+ features.

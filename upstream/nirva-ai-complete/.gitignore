@@ -1,0 +1,86 @@
+# Dependencies
+node_modules/
+npm-debug.log
+npm-error.log
+yarn-error.log
+yarn-debug.log
+package-lock.json
+yarn.lock
+
+# Environment
+.env
+.env.local
+.env.*.local
+.env.test
+
+# Build artifacts
+dist/
+build/
+.tsc-out/
+*.tsbuildinfo
+
+# Test coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.sublime-*
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+*.pid
+*.seed
+
+# Logs
+logs/
+*.log
+lerna-debug.log*
+
+# Runtime
+tmp/
+temp/
+.cache/
+.tmp/
+
+# Docker
+docker-compose.override.yml
+
+# Database
+data/
+*.sqlite
+*.db
+
+# Performance
+*.prof
+performance-report/
+
+# Documentation build
+docs/.vuepress/dist/
+
+# Misc
+.env.prod.local
+.env.prod.*.local
+secrets/
+private/
+
+# CI/CD
+.circleci/
+.travis.yml
+
+# Node
+.node_repl_history
+
+# Turbo
+.turbo/
+
+# Generated
+tsconfig.tsbuildinfo

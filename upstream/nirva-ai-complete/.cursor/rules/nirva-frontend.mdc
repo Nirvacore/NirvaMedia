@@ -1,0 +1,97 @@
+---
+description: Frontend pages, components, hooks, and UI patterns
+globs: ["client/**", "DESIGN_SYSTEM.md"]
+alwaysApply: false
+---
+
+# Nirva Frontend Guide
+
+## Page inventory
+
+| File | Route | Key features |
+|------|-------|--------------|
+| Home.tsx | `/` | Command Center — live stats, tasks, infra, cost widget |
+| Demo.tsx | `/demo` | Feature cards linking to all modules |
+| Chat.tsx | `/chat` | Agent selector, ROUTER badge, memory toggle, history |
+| Memory.tsx | `/memory` | Qdrant CRUD + semantic search + Obsidian vault section |
+| Orchestration.tsx | `/orchestration` | Model tiers, cost chart, recent routes |
+| Organization.tsx | `/organization` | 8 AI Companies org chart from API |
+| Ecosystem.tsx | `/ecosystem` | 13 products health ping |
+| Agents.tsx | `/agents` | 109 grid, filter tier/category/search |
+| AgentDetail.tsx | `/agents/:name` | Profile, prompt edit, capabilities |
+| Tasks.tsx | `/tasks` | Queue with status filters, retry/pause |
+| Workflows.tsx | `/workflows` | n8n template gallery + run |
+| Reports.tsx | `/reports` | Agent output history |
+| Marketplace.tsx | `/marketplace` | Skill listings import/export |
+| Plugins.tsx | `/plugins` | Install/invoke per agent |
+| Voice.tsx | `/voice` | Wake word, STT, TTS, voice nav |
+| MindMap.tsx | `/mindmap` | @xyflow/react agent graph |
+| Settings.tsx | `/settings` | LLM, API keys, Integrations (Obsidian), Voice, About |
+| Docs.tsx | `/docs` | Links to /api/docs, storybook |
+| Files.tsx | `/files` | Placeholder |
+| Terminal.tsx | `/terminal` | Placeholder |
+
+## Lazy loading
+
+All pages use `lazy(() => import(...))` in App.tsx with `<Suspense fallback={<PageLoader />}>`.
+
+## Sidebar navigation
+
+Defined in `client/src/components/Sidebar.tsx` → `navItems[]`.
+Add new routes in 3 places: App.tsx Route, Sidebar navItems, i18n `t.navXxx`.
+
+## Contexts & hooks
+
+| Hook/Context | File | Provides |
+|--------------|------|----------|
+| useLive() | LiveContext.tsx | WS connected, agentStats, tasks, infrastructure |
+| useSettings pattern | useSettings.ts | loadClientSettings(), saveSettings() |
+| useTTS() | useTTS.ts | SpeechSynthesis speak/stop |
+| useVoiceNavigation() | useVoiceNavigation.ts | Keyword → wouter navigate |
+| useTheme() | ThemeContext.tsx | light/pastel/dark |
+| useLanguage() | LanguageContext.tsx | locale, t(), 17 languages |
+| useAuth() | AuthContext.tsx | user, login, logout |
+| useTenant() | TenantContext.tsx | current tenant, switch |
+
+## LiveContext WebSocket
+
+Connects to `/ws` on mount. Handles:
+- `connected` — handshake
+- `agent_stats` — { total, active, idle }
+- `tasks` — task summary counts
+- `infrastructure` — ollama/qdrant/n8n status
+- `task_update` — single task change
+- `system_alert` — toast-worthy alerts
+
+Use `<LiveIndicator />` in Sidebar for connection dot.
+
+## Command palette
+
+`CommandPalette.tsx` — Cmd+K navigation to all routes.
+
+## PWA / offline
+
+`InstallPrompt.tsx` — add to homescreen
+`OfflineBanner.tsx` — network status
+Service worker in `client/public/` (if present)
+
+## Styling
+
+- Tailwind CSS 4 via `@tailwindcss/vite`
+- Design tokens in `client/src/index.css` (Minimal Garden theme)
+- shadcn/ui components — don't modify primitives unless necessary
+- Responsive: `sm:` `md:` breakpoints, sidebar collapses to 72px
+
+## Adding a new page (checklist)
+
+1. Create `client/src/pages/MyPage.tsx` with Sidebar + main layout
+2. Add lazy import + Route in `App.tsx`
+3. Add nav item in `Sidebar.tsx`
+4. Add i18n keys in `lib/i18n.ts` (all 17 locales or at least th/en)
+5. Add API functions in `lib/api.ts` if needed
+6. Add e2e smoke test in `e2e/smoke.spec.ts` if critical path
+
+## Storybook
+
+`.storybook/` — component stories for ui/button, card, badge
+Built to `/storybook/` in production via `pnpm build:full`

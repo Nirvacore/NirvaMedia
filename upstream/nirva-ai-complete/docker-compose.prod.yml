@@ -1,0 +1,70 @@
+# Production stack for Contabo VPS (ai.nirva.one)
+# Usage: docker compose -f docker-compose.prod.yml --env-file env/contabo.prod.env up -d --build
+
+services:
+  dashboard:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${DASHBOARD_HOST_PORT:-3000}:3000"
+    env_file:
+      - env/contabo.prod.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_PATH: /app/data/nirva.db
+      VITE_OLLAMA_URL: http://ollama:11434
+      VITE_QDRANT_URL: http://qdrant:6333
+      VITE_N8N_URL: http://n8n:5678
+    volumes:
+      - dashboard_data:/app/data
+    depends_on:
+      - ollama
+      - qdrant
+    networks:
+      - nirva
+
+  ollama:
+    image: ollama/ollama:latest
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - nirva
+    # GPU: uncomment on Contabo GPU VPS
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - nirva
+
+  n8n:
+    image: n8nio/n8n:latest
+    restart: unless-stopped
+    environment:
+      N8N_HOST: ai.nirva.one
+      N8N_PORT: 5678
+      N8N_PROTOCOL: https
+      WEBHOOK_URL: https://ai.nirva.one/n8n/
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - nirva
+
+networks:
+  nirva:
+    driver: bridge
+
+volumes:
+  dashboard_data:
+  ollama_data:
+  qdrant_data:
+  n8n_data:

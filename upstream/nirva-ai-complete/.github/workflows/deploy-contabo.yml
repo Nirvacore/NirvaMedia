@@ -1,0 +1,75 @@
+name: Deploy to Contabo
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".cursor/**"
+      - ".cursorrules"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to deploy
+        default: main
+
+concurrency:
+  group: deploy-contabo
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Contabo VPS
+    runs-on: ubuntu-latest
+    if: ${{ secrets.CONTABO_HOST != '' && secrets.CONTABO_SSH_KEY != '' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || 'main' }}
+
+      - name: Sync files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.CONTABO_HOST }}
+          username: ${{ secrets.CONTABO_USER || 'root' }}
+          key: ${{ secrets.CONTABO_SSH_KEY }}
+          port: 22
+          source: ".,!node_modules,!dist,!.git,!nirva-AI,!.manus-logs"
+          target: /opt/nirva-AI
+          strip_components: 0
+          overwrite: true
+
+      - name: Remote deploy
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.CONTABO_HOST }}
+          username: ${{ secrets.CONTABO_USER || 'root' }}
+          key: ${{ secrets.CONTABO_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            chmod +x /opt/nirva-AI/deploy/contabo/*.sh
+            bash /opt/nirva-AI/deploy/contabo/remote-deploy.sh
+
+      - name: Verify health on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.CONTABO_HOST }}
+          username: ${{ secrets.CONTABO_USER || 'root' }}
+          key: ${{ secrets.CONTABO_SSH_KEY }}
+          script: |
+            PORT=$(cat /opt/nirva-AI/env/.dashboard-port 2>/dev/null || echo 3100)
+            curl -sf "http://127.0.0.1:${PORT}/api/health" | python3 -m json.tool || exit 1
+
+  secrets-missing:
+    name: Secrets not configured
+    runs-on: ubuntu-latest
+    if: ${{ secrets.CONTABO_HOST == '' || secrets.CONTABO_SSH_KEY == '' }}
+    steps:
+      - name: Hint
+        run: |
+          echo "::warning::Contabo deploy skipped — set GitHub Secrets first"
+          echo "Run on Mac: bash scripts/setup-contabo-auto-deploy.sh"
+          echo "Docs: docs/AUTO_DEPLOY.md"

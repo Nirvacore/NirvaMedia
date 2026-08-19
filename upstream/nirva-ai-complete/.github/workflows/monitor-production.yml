@@ -1,0 +1,34 @@
+name: Monitor Production
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"   # every 6 hours
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check ai.nirva.one health
+        run: |
+          echo "Checking https://ai.nirva.one/api/health ..."
+          CODE=$(curl -sS -o /tmp/health.json -w "%{http_code}" https://ai.nirva.one/api/health || echo "000")
+          echo "HTTP $CODE"
+          if [ "$CODE" = "200" ]; then
+            cat /tmp/health.json
+            VERSION=$(python3 -c "import json; print(json.load(open('/tmp/health.json'))['version'])" 2>/dev/null || echo "?")
+            echo "✅ Production healthy — version $VERSION"
+          else
+            echo "❌ Production unhealthy (HTTP $CODE)"
+            head -c 500 /tmp/health.json || true
+            echo ""
+            echo "→ Deploy needed: see docs/DEPLOY_NOW.md"
+            echo "::warning::ai.nirva.one is not healthy yet"
+          fi
+
+      - name: Verify endpoints
+        if: success()
+        continue-on-error: true
+        run: bash scripts/verify-production.sh https://ai.nirva.one

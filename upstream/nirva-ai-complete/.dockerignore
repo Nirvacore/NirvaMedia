@@ -1,0 +1,57 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+__tests__
+*.test.ts
+*.spec.ts
+
+# IDEs
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+dist
+build
+.tsc-out
+
+# Documentation
+docs
+*.md
+README.md
+
+# CI/CD
+.circleci
+.travis.yml
+azure-pipelines.yml
+.gitlab-ci.yml
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Misc
+*.log
+tmp
+temp
+.cache
+.tmp

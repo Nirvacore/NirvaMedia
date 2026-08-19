@@ -1,0 +1,127 @@
+---
+description: Nirva OS — universal architecture, data flow, and coding standards (always active)
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# Nirva OS — Universal Architecture
+
+## Mental model
+
+This is a **full-stack monorepo**. Client and server share TypeScript types from `shared/`. There is no separate backend repo. Express serves both `/api/*` REST and the React SPA in production.
+
+## Request lifecycle
+
+```
+Browser page
+  → client/src/lib/api.ts (apiFetch → /api/...)
+    → server/api.ts route handler
+      → server/db/ | server/memory/ | server/orchestration/ | Ollama/Qdrant/n8n fetch
+        → JSON response
+          → React state update
+            → WebSocket broadcast (if task/status changed)
+```
+
+## Provider tree (App.tsx)
+
+```
+ErrorBoundary
+  ThemeProvider (light/pastel/dark)
+    LanguageProvider (17 locales)
+      LiveProvider (WebSocket — useLive())
+        AuthProvider (OAuth/demo)
+          TenantProvider (multi-tenant)
+            CommandPalette · OfflineBanner · InstallPrompt · Router
+```
+
+## Server bootstrap (server/index.ts)
+
+1. `applyMiddleware(app)` — CORS, security headers, logging
+2. `app.use("/api", createApiRouter())`
+3. Static files from `dist/public/` (+ `/storybook/` if built)
+4. SPA fallback `*` → index.html
+5. `initWebSocket(server)` on same port
+6. Listen `HOST:PORT` (default `0.0.0.0:3000`)
+
+## SQLite schema (server/db/index.ts)
+
+Tables: agents, tasks, chat_messages, memories, tenants, plugins, marketplace_items, orchestration_usage, reports
+Always use exported helpers — never raw SQL in route handlers.
+
+## Memory / RAG pipeline
+
+1. `POST /api/memory` → embed via Ollama → upsert Qdrant + SQLite fallback
+2. `POST /api/memory/search` → vector search per agent collection
+3. `POST /api/chat` with `useMemory: true` → inject top-k memories into prompt
+4. Obsidian `POST /api/obsidian/sync` → read vault → index as memories for agent
+
+## Chat pipeline
+
+1. User message → optional intent analysis (`server/router/`)
+2. ROUTER picks model tier if `useOrchestration` (`shared/model-orchestration.ts`)
+3. System prompt from `shared/agent-prompts.ts`
+4. Ollama `POST /api/generate` or mock fallback
+5. Save to chat_messages + return with modelRouting metadata
+
+## Control Tower chat (`POST /api/chat/tower`)
+
+Multi-agent orchestration: DESK routes to specialists, aggregates responses.
+
+## Real-time (server/ws/index.ts)
+
+After ANY task create/update/delete/retry/pause:
+```typescript
+import { broadcastTasksSummary, broadcastTaskUpdate } from "./ws/index.ts";
+broadcastTasksSummary();
+```
+
+Client `LiveContext` subscribes and updates Home/Tasks without refresh.
+
+## File creation policy
+
+- **Prefer editing** existing files over new ones
+- New page → `client/src/pages/X.tsx` + route in `App.tsx` + nav in `Sidebar.tsx` + i18n keys
+- New API → one route block in `server/api.ts` + client function in `lib/api.ts`
+- New shared type → `shared/` (not duplicated in client/server)
+
+## TypeScript rules
+
+- Strict mode — no `any`, no `@ts-ignore` without reason
+- Use `import type` for type-only imports
+- Server dynamic imports: `await import("./obsidian/index.ts")` for lazy loading
+- Agent names are UPPERCASE strings ("DESK", "CODE")
+
+## Testing requirements
+
+| Suite | Command | Count |
+|-------|---------|-------|
+| Unit | `pnpm test` | 56 |
+| Typecheck | `pnpm check` | — |
+| E2E | `pnpm test:e2e` | 24 |
+
+Test locations: `shared/__tests__/`, `server/__tests__/`, `e2e/smoke.spec.ts`
+Key tests: registry (109 agents), organization (8 companies), model-orchestration, tenants-plugins, auth
+
+## UI conventions
+
+- shadcn/ui in `client/src/components/ui/`
+- Page layout: `<Sidebar />` + `<main className="flex-1 ml-[72px] p-8">`
+- Cards: `rounded-2xl border border-border bg-card`
+- Toasts: `sonner` — `toast.success()` / `toast.error()`
+- Icons: `lucide-react`
+- Colors: primary green (#7C9A82 garden theme), violet for Obsidian
+
+## i18n
+
+17 locales in `client/src/lib/i18n.ts`. Add `t.navXxx` keys for new nav items. Thai + English are primary.
+
+## Security
+
+- Never commit API keys — use env vars or Settings localStorage
+- `ALLOW_DEMO_AUTH=false` in production
+- CORS via `CORS_ORIGINS` env
+- OAuth: Manus Space on ai.nirva.one
+
+## Version
+
+Health endpoint returns `version: "0.14.4"`. Bump on release in `server/api.ts` + CHANGELOG.md.

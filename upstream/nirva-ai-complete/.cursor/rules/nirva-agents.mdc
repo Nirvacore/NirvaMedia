@@ -1,0 +1,126 @@
+---
+description: 109-agent registry, prompts, organization blueprint, and routing
+globs: ["shared/agents.ts", "shared/agent-*.ts", "shared/organization.ts", "shared/permissions.ts", "docs/AGENT_REGISTRY.md", "docs/NIRVA_ORGANIZATION_BLUEPRINT.md"]
+alwaysApply: false
+---
+
+# Nirva Agent System
+
+## Registry (shared/agents.ts)
+
+```typescript
+interface Agent {
+  name: string;      // UPPERCASE e.g. "DESK"
+  role: string;
+  tier: "self-hosted" | "hybrid" | "cloud";
+  category: string;  // one of 14 categories
+}
+export const AGENTS: Agent[] = [ ... ]; // 109 items
+```
+
+**Total: 109 agents** · **14 categories** · **3 tiers**
+
+## Categories (14)
+
+1. Core Control Tower
+2. Finance & Operations
+3. Sales & Procurement
+4. DESK Family
+5. Operations & Quality
+6. Teaching & Knowledge
+7. Specialized Roles
+8. Best Investigation
+9. NIRVA TECH
+10. MU UNIVERSE
+11. Investment & Legal
+12. Real-time Data
+13. Media & Content
+14. Teacher Module
+
+## Control Tower (virtual + core)
+
+| Agent | Role |
+|-------|------|
+| DESK | Chief of Staff — intent, routing, prioritization |
+| FLOW | Operations Manager — workflows, task orchestration |
+| SAGE | Strategic AI — org-level decisions |
+| ROUTER | Model Resource Manager — tier selection (virtual, in model-orchestration) |
+
+## System prompts (shared/agent-prompts.ts)
+
+```typescript
+export const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
+  DESK: "You are DESK...",
+  CODE: "You are CODE...",
+  // 109/109 coverage required
+};
+```
+
+**Rule:** Adding agent to AGENTS[] requires matching prompt key (uppercase name).
+
+## Agent details (shared/agent-details.ts)
+
+Extended profiles: capabilities, tools, model recommendations, useCases.
+Used by AgentDetail page and `/api/agents/:name`.
+
+## Intent routing flow
+
+```
+User message
+  → DESK analyzes intent (server/router/classifier.ts)
+    → suggests 1-N specialist agents
+      → POST /api/router/execute or /api/chat with agent param
+```
+
+Classifier types in `shared/__tests__/openapi-classifier.test.ts`.
+
+## Organization Blueprint V1 (shared/organization.ts)
+
+Maps existing 109 agents into **8 AI Companies** without creating new agents:
+
+| Company ID | Name |
+|------------|------|
+| software | Nirva Software Company |
+| commerce | Commerce Company |
+| media | Media Company |
+| service | Service Company |
+| business-support | Business Support |
+| knowledge | Knowledge System |
+| investment-legal | Investment & Legal |
+
+Each company has `departments[]` → `agents[]` with blueprintRole, skills, modelTier, model.
+
+API: `GET /api/organization` returns full tree.
+Stats: `getOrganizationStats()` — company count, department count, unique agents.
+
+## Permissions (shared/permissions.ts)
+
+Role-based access matrix for multi-tenant features.
+API: `GET /api/permissions`
+
+## Marketplace integration
+
+Agents can export/import skills via `/api/marketplace/export/:agentName`.
+Marketplace categories in `shared/marketplace.ts`.
+
+## Testing agents
+
+`shared/__tests__/registry.test.ts`:
+- AGENTS.length === 109
+- Every agent has prompt in AGENT_SYSTEM_PROMPTS
+- No duplicate names
+- Valid tier values
+
+`shared/__tests__/organization.test.ts`:
+- 8 companies
+- All org agents exist in AGENTS registry
+- ROUTER is virtual (allowed outside AGENTS)
+
+## Common agent groups
+
+**Software:** CODE, ARCH, SHIP, GUARD, PIXEL, RAG-BUILDER
+**Commerce:** REACH, PRICE, GROW, BLOOM, WIN, STAMP
+**Finance:** TALLY, COIN, CARE, READ
+**Media:** VOICE, WAVE, PIXEL
+**Knowledge:** TEACH, GATHER, SAGE
+**Legal:** SEAL, BULL

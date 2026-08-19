@@ -1,0 +1,171 @@
+---
+description: Complete REST API reference for Nirva — use when editing server/api.ts or client/src/lib/api.ts
+globs: ["server/api.ts", "server/**/*.ts", "client/src/lib/api.ts", "API.md", "server/openapi/**"]
+alwaysApply: false
+---
+
+# Nirva API Reference
+
+Base: `/api` · OpenAPI: `/api/openapi.json` · Swagger UI: `/api/docs`
+
+## Error format
+
+```json
+{ "error": { "code": "MISSING_PARAMS", "message": "..." } }
+```
+
+## Health & system
+
+| Method | Path | Notes |
+|--------|------|-------|
+| GET | `/health` | `{ status, version, uptime, services }` |
+| GET | `/metrics` | Prometheus-style text |
+| GET | `/system/status` | ASCII status box (Ollama/Qdrant/n8n) |
+
+## Auth
+
+| Method | Path | Body/Query |
+|--------|------|------------|
+| GET | `/auth/me` | Returns current user or null |
+| GET | `/auth/login` | Redirect to OAuth portal |
+| GET | `/oauth/callback` | OAuth code exchange |
+| POST | `/auth/demo-login` | `{ name }` — dev only |
+| POST | `/auth/logout` | Clear session |
+
+## Tenants (multi-tenant)
+
+| Method | Path |
+|--------|------|
+| GET | `/tenants` |
+| GET | `/tenants/current` |
+| GET | `/tenants/:id` |
+| POST | `/tenants` `{ name, slug }` |
+
+## Plugins
+
+| Method | Path |
+|--------|------|
+| GET | `/plugins` |
+| GET | `/plugins/agent/:agentName` |
+| POST | `/plugins/install` `{ agentName, pluginId, config }` |
+| PATCH | `/plugins/:id` |
+| POST | `/plugins/:id/invoke` `{ input }` |
+
+## Organization & permissions
+
+| Method | Path | Returns |
+|--------|------|---------|
+| GET | `/organization` | 8 AI Companies tree |
+| GET | `/organization/router` | Control Tower agents |
+| GET | `/permissions` | Role matrix |
+
+## Intent router
+
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/router/classifier` | Available classifiers |
+| POST | `/router/analyze` | `{ message }` → intent + suggested agents |
+| POST | `/router/execute` | `{ message, agents[] }` → routed execution |
+
+## Model orchestration (ROUTER)
+
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/orchestration` | Tier catalog + rules |
+| GET | `/orchestration/cost` | `?period=today` cost breakdown |
+| GET | `/orchestration/recent` | Recent routing decisions |
+| POST | `/orchestration/route` | `{ agent, task }` → ModelRouteDecision |
+| POST | `/orchestration/route-pipeline` | `{ task, agents[] }` → PipelineModelPlan |
+
+## Agents
+
+| Method | Path | Query |
+|--------|------|-------|
+| GET | `/agents` | `tier`, `category`, `search`, `page`, `limit` |
+| GET | `/agents/:name` | Full detail + prompt |
+| PATCH | `/agents/:name` | `{ systemPrompt, model, status }` |
+| GET | `/agents/stats` | Counts by tier/category |
+
+## Chat
+
+| Method | Path | Body |
+|--------|------|------|
+| POST | `/chat` | `{ message, agent, sessionId?, ollamaUrl?, useMemory?, useOrchestration? }` |
+| GET | `/chat/history` | `?agent=DESK&limit=50` |
+| POST | `/chat/tower` | `{ message }` — Control Tower multi-agent |
+
+Chat response includes: `content`, `agent`, `source`, `model`, `modelRouting`, `memoryContext`
+
+## Tasks
+
+| Method | Path |
+|--------|------|
+| GET | `/tasks` `?status=all\|running\|queued\|completed\|failed` |
+| POST | `/tasks` `{ title, agent, description }` |
+| PATCH | `/tasks/:id` `{ status, progress, ... }` |
+| POST | `/tasks/:id/retry` |
+| POST | `/tasks/:id/pause` |
+| DELETE | `/tasks/:id` |
+
+**Always broadcast WS after mutations.**
+
+## Memory (Qdrant RAG)
+
+| Method | Path | Body |
+|--------|------|------|
+| GET | `/memory/stats` | Qdrant status + point count |
+| GET | `/memory` | `?agent=DESK` list memories |
+| POST | `/memory` | `{ agent, content, title?, source? }` |
+| POST | `/memory/search` | `{ agent, query, qdrantUrl? }` |
+| DELETE | `/memory/:id` | |
+
+## Obsidian
+
+| Method | Path | Body/Query |
+|--------|------|------------|
+| GET | `/obsidian/status` | `?url=&apiKey=` |
+| GET | `/obsidian/notes` | `?url=&apiKey=` → markdown files |
+| POST | `/obsidian/sync` | `{ url, apiKey, agent, maxFiles }` → Qdrant index |
+| POST | `/obsidian/search` | `{ query, url, apiKey }` |
+| POST | `/obsidian/write` | `{ path, content, url, apiKey }` |
+
+Requires Obsidian **Local REST API** plugin (port 27124).
+
+## Marketplace
+
+| Method | Path |
+|--------|------|
+| GET | `/marketplace` `?category=&search=` |
+| GET | `/marketplace/stats` |
+| GET | `/marketplace/:id` |
+| POST | `/marketplace` create listing |
+| POST | `/marketplace/import-json` |
+| POST | `/marketplace/:id/import` |
+| POST | `/marketplace/:id/rate` `{ rating }` |
+| GET | `/marketplace/export/:agentName` |
+
+## Reports, ecosystem, workflows
+
+| Method | Path |
+|--------|------|
+| GET | `/reports` `?agent=&limit=` |
+| GET | `/ecosystem` |
+| GET | `/ecosystem/apps` |
+| GET | `/ecosystem/:id` |
+| GET | `/workflows` |
+| GET | `/workflows/templates` |
+| POST | `/workflows/:id/run` |
+| GET | `/ollama/models` `?ollamaUrl=` |
+
+## Client api.ts pattern
+
+```typescript
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api${path}`, { ...init, headers: { "Content-Type": "application/json", ...init?.headers } });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+```
+
+Export typed functions: `fetchAgents()`, `sendChat()`, `fetchTasks()`, etc.
+Settings from `loadClientSettings()` inject ollamaUrl/qdrantUrl into requests.

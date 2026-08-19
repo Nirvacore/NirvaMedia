@@ -1,0 +1,100 @@
+---
+description: Shared types, settings, tenants, plugins, marketplace, orchestration models
+globs: ["shared/**"]
+alwaysApply: false
+---
+
+# Nirva Shared Layer
+
+`shared/` is imported by both client (`@shared/*`) and server (relative `../../shared/`).
+
+## Core files
+
+| File | Exports |
+|------|---------|
+| agents.ts | AGENTS[], Agent, AgentTier |
+| agent-prompts.ts | AGENT_SYSTEM_PROMPTS |
+| agent-details.ts | Extended agent profiles |
+| organization.ts | AI_COMPANIES, CONTROL_TOWER, OrgAgentRole |
+| model-orchestration.ts | MODEL_CATALOG, routeTask(), ORCHESTRATION_TIERS |
+| ecosystem.ts | NIRVA_ECOSYSTEM, EcosystemApp |
+| settings.ts | NirvaSettings, DEFAULT_SETTINGS, load/save |
+| tenants.ts | Tenant types, default tenant |
+| plugins.ts | Plugin definitions, categories |
+| marketplace.ts | MarketplaceItem, categories |
+| permissions.ts | Role permission matrix |
+| const.ts | Shared constants |
+
+## NirvaSettings (settings.ts)
+
+```typescript
+interface NirvaSettings {
+  ollamaUrl: string;
+  defaultModel: string;
+  qdrantUrl: string;
+  n8nUrl: string;
+  useOrchestration: boolean;
+  maxPremiumPercent: number;
+  preferSelfHosted: boolean;
+  ttsEnabled: boolean;
+  ttsSpeed: number;
+  wakeWord: string;
+  notifyOnComplete: boolean;
+  notifyOnError: boolean;
+  obsidianUrl: string;
+  obsidianApiKey: string;
+  useObsidian: boolean;
+}
+```
+
+Storage key: `nirva-settings` in localStorage.
+Client loads via `loadClientSettings()` which merges env + stored + defaults.
+
+## Model orchestration types
+
+```typescript
+type OrchestrationTier = "free" | "low_cost" | "premium";
+interface ModelRouteDecision {
+  agent: string;
+  task: string;
+  scores: TaskScores;
+  recommendedTier: OrchestrationTier;
+  model: ModelCatalogEntry;
+  reasoning: string;
+  reasoningTh: string;
+}
+```
+
+Key exports: `routeTask()`, `routePipeline()`, `MODEL_CATALOG`, `ORCHESTRATION_RULES`
+
+## Tenants (tenants.ts)
+
+Multi-tenant isolation for tasks, plugins, marketplace.
+Default tenant created on first run.
+
+## Plugins (plugins.ts)
+
+Plugin manifest format for agent extensions.
+Categories: tool, data, integration, ui
+
+## Marketplace (marketplace.ts)
+
+Agent skill listings — export/import JSON format.
+Rating, category, author, compatibility.
+
+## Tests in shared/
+
+| File | Tests |
+|------|-------|
+| registry.test.ts | 109 agents, prompts coverage |
+| organization.test.ts | 8 companies, agent mapping |
+| model-orchestration.test.ts | routing rules, tiers |
+| tenants-plugins.test.ts | multi-tenant plugin install |
+| marketplace.test.ts | listing CRUD |
+| openapi-classifier.test.ts | intent classification |
+
+## Import patterns
+
+Client: `import { AGENTS } from "@shared/agents"`
+Server: `import { AGENTS } from "../../shared/agents.ts"`
+Always use `.ts` extension in server imports (ESM).

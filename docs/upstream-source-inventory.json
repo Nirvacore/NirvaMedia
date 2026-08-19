@@ -22,12 +22,15 @@
     ]
   },
   "fullCheckout": {
-    "status": "available_external_workspace_checkout",
-    "path": "../nirva-media-source",
+    "status": "preserved_complete_in_product_repository",
+    "path": "upstream/nirva-ai-complete",
     "commit": "12b703434d724b1aff04675602d52356ee9c2198",
+    "fileCount": 437,
+    "manifest": "docs/complete-source-manifest.json",
+    "rootChecksum": "4af13c22b5d3c55a0f4180a700eada3475214e5aa8c4536762d536b9e4048fff",
     "notes": [
-      "This full checkout is the canonical local Claude source for auditing and extraction.",
-      "It is not bundled into the deployed Nirva Media product; reuse happens through explicit adapters and copied byte-verified assets."
+      "All files tracked at the Claude source commit are preserved byte-for-byte in the NirvaMedia GitHub repository.",
+      "The complete source is a read-only preservation layer; active reuse still happens through explicit adapters and verified assets."
     ]
   },
   "inventory": {
@@ -129,14 +132,14 @@
       },
       {
         "id": "nirva-ai-monolith",
-        "status": "intentionally_not_preserved",
+        "status": "preserved_complete_not_runtime_integrated",
         "upstreamPaths": ["client/**", "server/** except selected media references", "shared/** except shared/media.ts", "deployment and operations files"],
-        "reason": "Nirva Media is a separate product repository; unrelated ecosystem, infrastructure, identity, memory, marketplace, and orchestration code remains in Nirva AI."
+        "reason": "The complete monolith is now preserved under upstream/nirva-ai-complete for continuity, while unrelated runtimes remain intentionally disconnected from the active deployment."
       }
     ]
   },
   "capabilityTruth": {
-    "completeUpstreamSource": "available_external_workspace_checkout",
+    "completeUpstreamSource": "preserved_complete_in_github",
     "languageRegistry": "active",
     "curatedStudioCopy": "active",
     "scriptDetection": "active",

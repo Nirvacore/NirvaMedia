@@ -11,9 +11,11 @@
       "repository": "https://github.com/Nirvacore/nirva-AI",
       "branch": "claude/nirva-media-nle-vision-h0v1z0",
       "commit": "12b703434d724b1aff04675602d52356ee9c2198",
-      "localPath": "../nirva-media-source",
+      "localPath": "upstream/nirva-ai-complete",
       "contains": ["Nirva Studio OS", "NMD media engine", "NLE", "SDKs", "tests", "agent ecosystem"],
-      "runtimeTruth": "Full source checkout; individual modules still require their documented dependencies and passing tests."
+      "manifestPath": "docs/complete-source-manifest.json",
+      "rootChecksum": "4af13c22b5d3c55a0f4180a700eada3475214e5aa8c4536762d536b9e4048fff",
+      "runtimeTruth": "All 437 tracked source files are preserved byte-for-byte in this GitHub repository; preservation does not claim that every module is active in the deployed runtime."
     },
     {
       "id": "claude-preserved-snapshot",
@@ -65,6 +67,7 @@
       "creator": "Jidlada",
       "status": "preserved-reference",
       "localPath": "docs/brand-references/nirva-media-creator-dna-source.jpg",
+      "publicPath": "public/characters/nirva-media-creator-dna-source.jpg",
       "sha256": "96920b829cc7b920d9a269427285a338a8a5e17a75172ddcd4d34051a7a5a3a4",
       "usedBy": ["Nirva Character System visual direction"]
     },
@@ -74,6 +77,7 @@
       "creator": "Codex image generation",
       "status": "demo-active",
       "localPath": "public/characters/nirva-media-creator-v1.png",
+      "publicPath": "public/characters/nirva-media-creator-v1.png",
       "sha256": "b4e92439ca9139e2b8ab22a93c08aa187d9aeb346e6a720dd1d37603992070d5",
       "derivedFrom": ["user-character-dna-reference"],
       "usedBy": ["/", "/characters"]
@@ -84,6 +88,7 @@
       "creator": "Codex image generation",
       "status": "design-ready",
       "localPath": "public/characters/nirva-ecosystem-founders-v1.png",
+      "publicPath": "public/characters/nirva-ecosystem-founders-v1.png",
       "sha256": "219129115409b56e97c3f573b984e959809bf3dd72f6cc56af65383d878feba9",
       "derivedFrom": ["user-character-dna-reference"],
       "usedBy": ["/characters"]

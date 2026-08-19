@@ -1,0 +1,19 @@
+# Traefik dynamic config — ai.nirva.one → Nirva dashboard
+# Copy to traefik dynamic folder (see wire-proxy.sh)
+# Replace __PORT__ with value from env/.dashboard-port (default 3100)
+# Replace __GATEWAY__ with docker bridge gateway (usually 172.17.0.1)
+
+http:
+  routers:
+    nirva-ai:
+      rule: Host(`ai.nirva.one`)
+      entryPoints:
+        - websecure
+        - web
+      service: nirva-ai
+      tls: {}
+  services:
+    nirva-ai:
+      loadBalancer:
+        servers:
+          - url: http://__GATEWAY__:__PORT__

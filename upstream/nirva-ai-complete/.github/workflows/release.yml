@@ -1,0 +1,218 @@
+name: Release & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Determine version
+        id: version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "current_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          
+          if [[ ${{ github.ref }} == refs/tags/* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=$CURRENT_VERSION
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          CHANGELOG=$(git log --oneline --no-decorate $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD | head -20 || echo "Initial release")
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+
+      - name: Build application
+        run: |
+          npm ci
+          npm run build --if-present
+
+      - name: Create GitHub release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ## Build Artifacts
+            See assets below for the built application.
+          draft: false
+          prerelease: false
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: create-release
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:v${{ needs.create-release.outputs.version }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.create-release.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+
+    environment:
+      name: staging
+      url: https://staging.nmd.platform
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to staging
+        run: |
+          echo "Deploying to staging environment..."
+          echo "Image: ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.version }}"
+          # Add your deployment script here
+          bash scripts/deploy-staging.sh ${{ needs.create-release.outputs.version }}
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: [create-release, deploy-staging]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run smoke tests
+        run: npm test -- --testPathPattern='smoke' --runInBand
+        env:
+          API_URL: https://staging.nmd.platform
+          TIMEOUT: 30000
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: [create-release, smoke-tests]
+    if: success()
+
+    environment:
+      name: production
+      url: https://api.nmd.platform
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Deploy to production
+        run: |
+          echo "Deploying to production environment..."
+          echo "Image: ghcr.io/${{ github.repository }}:${{ needs.create-release.outputs.version }}"
+          bash scripts/deploy-production.sh ${{ needs.create-release.outputs.version }}
+
+  post-deployment:
+    runs-on: ubuntu-latest
+    needs: [create-release, deploy-production]
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Health check
+        run: |
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            if curl -sf https://api.nmd.platform/health; then
+              echo "Production deployment successful!"
+              exit 0
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "Health check failed, retrying... ($RETRY_COUNT/$MAX_RETRIES)"
+            sleep 10
+          done
+          
+          echo "Production deployment health check failed after $MAX_RETRIES attempts"
+          exit 1
+
+      - name: Notify deployment
+        if: always()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const status = context.job.status;
+            const deployment = context.payload.repository.name;
+            const version = '${{ needs.create-release.outputs.version }}';
+            
+            const message = `**Deployment Report: ${status.toUpperCase()}**\n\n` +
+              `- Repository: ${deployment}\n` +
+              `- Version: v${version}\n` +
+              `- Environment: Production\n` +
+              `- Status: ${status}\n` +
+              `- Timestamp: ${new Date().toISOString()}`;
+            
+            console.log(message);

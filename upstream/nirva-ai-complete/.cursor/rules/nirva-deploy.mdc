@@ -1,0 +1,120 @@
+---
+description: Deploy, production, CI/CD, environment variables, and ops
+globs: ["deploy/**", "env/**", "docs/DEPLOY*", "scripts/**", ".github/**", "docker-compose*", "CODE_FREEZE.md", "DEPLOYMENT.md"]
+alwaysApply: false
+---
+
+# Nirva Deploy & Operations
+
+## Production URLs
+
+| Target | URL | Status |
+|--------|-----|--------|
+| Manus Space | https://ai.nirva.one | Deploy when ready |
+| Health check | https://ai.nirva.one/api/health | Expect `version: 0.14.4` |
+| API docs | https://ai.nirva.one/api/docs | Swagger UI |
+| Demo hub | https://ai.nirva.one/demo | Feature showcase |
+
+## Code freeze (CODE_FREEZE.md)
+
+Feature freeze until production health returns 0.14.x.
+**Allowed:** deploy, hotfix, DNS, env fixes
+**Blocked:** new features, big refactors, v0.15 work
+**Exception:** Cursor/MCP/Obsidian integration (v0.14.4)
+
+## DO NOT deploy
+
+Branch `claude/pensive-meitner-befe4h` — see `docs/CLAUDE_BRANCH_WARNING.md`
+Contains risky changes: gutted agents.ts, mem0, Traefik overrides.
+
+## Manus Space deploy
+
+```bash
+pnpm manus:config   # prints config
+```
+
+**Build:** `pnpm install --frozen-lockfile && pnpm build`
+**Start:** `bash deploy/manus/start.sh`
+**Env:** copy `env/ai.nirva.one.env.example` → `.env`
+
+Key env vars:
+- `PUBLIC_URL=https://ai.nirva.one`
+- `HOST=0.0.0.0` `PORT=3000`
+- `DATABASE_PATH=/app/data/nirva.db`
+- `ALLOW_DEMO_AUTH=false`
+- `VITE_OAUTH_PORTAL_URL` + `VITE_APP_ID` (Manus OAuth)
+- `CORS_ORIGINS=https://ai.nirva.one`
+
+## Contabo VPS deploy
+
+```bash
+bash deploy/contabo/deploy.sh
+```
+
+Env: `env/contabo.prod.env.example`
+Docs: `docs/DEPLOY_CONTABO.md`
+
+## Verify production
+
+```bash
+curl -s https://ai.nirva.one/api/health
+bash scripts/verify-production.sh https://ai.nirva.one
+```
+
+Expected: `"status": "healthy"`, `"version": "0.14.4"`
+
+## Build pipeline
+
+```
+pnpm build
+  ├── vite build → dist/public/     (React SPA)
+  └── esbuild server/index.ts → dist/index.js
+```
+
+`pnpm build:full` adds Storybook to dist/public/storybook/
+
+## Docker
+
+`docker-compose.prod.yml` — production stack (if used)
+CI: `.github/workflows/` — unit tests, e2e, docker-smoke
+
+## Server production notes
+
+- SQLite: `getDb()` creates parent dir of DATABASE_PATH (hotfix v0.14.2)
+- Listen on 0.0.0.0 not localhost
+- OAuth callback: `/manus-oauth/callback` AND `/api/oauth/callback`
+- Static SPA fallback for all non-API routes
+
+## Local dev
+
+```bash
+pnpm install
+pnpm go           # recommended — setup + dev
+# or
+pnpm dev          # port 3000
+```
+
+Optional services for full features: Ollama, Qdrant, n8n, Obsidian
+
+## Git workflow
+
+- `main` — production branch
+- Feature branches: `cursor/<name>-8ce3`
+- Hotfix: `cursor/hotfix-<name>-8ce3`
+- Tags: `v0.14.4`, `v0.14.3`, etc.
+
+## Monitoring
+
+`.github/workflows/monitor-production.yml` — pings ai.nirva.one health
+Warns (not fails) when site returns 500
+
+## Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| Manus 500 HTML | Republish on Manus, check start.sh + env |
+| SQLite crash | Set DATABASE_PATH, ensure parent dir exists |
+| Chat mock only | Start Ollama at settings.ollamaUrl |
+| Memory offline | Start Qdrant or use SQLite fallback |
+| Obsidian fail | Enable Local REST API plugin, check API key |
+| CI fails fast | Check org billing/permissions, not just code |

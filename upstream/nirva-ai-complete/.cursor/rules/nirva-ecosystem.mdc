@@ -1,0 +1,81 @@
+---
+description: Nirvacore ecosystem — 13 products, repos, and cross-app integration
+globs: ["shared/ecosystem.ts", "server/ecosystem/**", "client/src/pages/Ecosystem.tsx", "docs/NIRVA_ECOSYSTEM.md"]
+alwaysApply: false
+---
+
+# Nirvacore Ecosystem
+
+## Control tower role
+
+**nirva-AI** (this repo) orchestrates all Nirvacore products. It does not replace them — it routes agents, monitors health, and provides unified chat/memory/workflows.
+
+Registry: `shared/ecosystem.ts` → `NIRVA_ECOSYSTEM[]`
+
+## Products
+
+| ID | Name | Status | Stack | Key agents |
+|----|------|--------|-------|------------|
+| nirva-ai | Nirva AI Core | active | React+Express+SQLite | DESK, FLOW, CODE, ARCH |
+| nirvaprocure | Nirvaprocure | active | Next.js+NestJS+Flutter | READ, PRICE, REACH, STAMP, WIN |
+| nirvasell | Nirvasell | development | Python+FastAPI | REACH, GROW, BLOOM, PIXEL |
+| nirvamedia | NirvaMedia | development | — | VOICE, WAVE, PIXEL |
+| nirvacare | NirvaCare | planned | — | CARE |
+| nirvacoin | NirvaCoin | planned | — | COIN, TALLY |
+| nirvalegal | NirvaLegal | planned | — | SEAL, BULL |
+| nirvateach | NirvaTeach | planned | — | TEACH, GATHER |
+| nirvaflow | NirvaFlow | planned | — | FLOW |
+| nirvaguard | NirvaGuard | planned | — | GUARD |
+| nirvadata | NirvaData | planned | — | — |
+| nirvavoice | NirvaVoice | planned | — | VOICE |
+| nirvacloud | NirvaCloud | planned | — | — |
+
+## EcosystemApp interface
+
+```typescript
+interface EcosystemApp {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  role: "control-tower" | "product" | "infrastructure" | "integration";
+  status: "active" | "development" | "planned";
+  repo: string;           // GitHub URL
+  stack: string[];
+  agents: string[];       // linked agent names
+  healthPath?: string;    // e.g. "/api/health"
+  defaultUrl?: string;
+  envKey?: string;        // VITE_*_URL for client
+  color: string;
+  icon: string;
+}
+```
+
+## API
+
+- `GET /api/ecosystem` — all apps with live health status
+- `GET /api/ecosystem/apps` — list without health ping
+- `GET /api/ecosystem/:id` — single app detail + health
+
+## Ecosystem page
+
+`/ecosystem` — grid of product cards with health dots, repo links, agent badges.
+Pings each app's `healthPath` on defaultUrl.
+
+## Cross-app env vars
+
+Products can be linked via Vite env:
+- `VITE_NIRVAPROCURE_URL`
+- `VITE_NIRVASELL_URL`
+- etc. (see ecosystem.ts envKey per app)
+
+## Integration pattern
+
+1. Register app in `shared/ecosystem.ts`
+2. Add health ping in `server/ecosystem/index.ts`
+3. Display on Ecosystem page
+4. Route agent tasks to external app APIs via plugins or workflows
+
+## GitHub org
+
+All repos under: https://github.com/Nirvacore/
