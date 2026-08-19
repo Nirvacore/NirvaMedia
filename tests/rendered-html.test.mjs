@@ -123,7 +123,8 @@ test("persists Studio, Product Fabric, and connector workflows with D1", async (
   assert.match(campaignsRoute, /db\.batch/);
   assert.match(campaignsRoute, /Xiaohongshu/);
   assert.match(campaignsRoute, /WhatsApp Business/);
-  assert.match(postsRoute, /status: "scheduled"/);
+  assert.match(postsRoute, /targetStatus/);
+  assert.match(postsRoute, /claude-upstream-status-flow/);
   assert.match(migration, /CREATE TABLE `campaigns`/);
   assert.match(migration, /CREATE TABLE `campaign_posts`/);
   assert.match(schema, /solutionConfigs/);

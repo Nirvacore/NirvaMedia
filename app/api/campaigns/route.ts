@@ -3,6 +3,7 @@ import { getDb } from "../../../db";
 import { campaignPosts, campaigns } from "../../../db/schema";
 import { getLocalizedCampaignCopy } from "../../../lib/nle/campaign-copy";
 import { getNirvaLanguage, isSupportedNirvaLanguage } from "../../../lib/nle/languages";
+import { adaptActiveChannelText, CLAUDE_MEDIA_SOURCE } from "../../../lib/upstream-media-adapter";
 
 const channelTemplates: Record<string, { format: string; title: string; body: string }> = {
   Instagram: {
@@ -151,13 +152,14 @@ export async function POST(request: Request) {
     const languageInfo = getNirvaLanguage(language)!;
     const postRows = channels.map((channel) => {
       const template = channelTemplates[channel];
+      const adapted = adaptActiveChannelText(localizedCopy.body, channel);
       return {
         id: crypto.randomUUID(),
         campaignId,
         channel,
         format: template.format,
         title: localizedCopy.title,
-        body: localizedCopy.body,
+        body: adapted.body,
         status: "draft",
         createdAt: now,
       };
@@ -185,6 +187,13 @@ export async function POST(request: Request) {
         language: languageInfo,
         mode: "curated-nle-preview",
         providerTranslation: false,
+      },
+      continuity: {
+        source: CLAUDE_MEDIA_SOURCE,
+        adaptedChannels: channels.map((channel) => ({
+          channel,
+          ...adaptActiveChannelText(localizedCopy.body, channel),
+        })),
       },
     }, { status: 201 });
   } catch (error) {

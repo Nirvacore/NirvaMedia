@@ -49,7 +49,7 @@ export default function CharactersPage() {
         <ol>{characterPrinciples.map((principle, index) => <li key={principle}><span>{String(index + 1).padStart(2, "0")}</span><p>{principle}</p></li>)}</ol>
       </section>
 
-      <footer className="character-footer"><Link href="/">← Nirva Media</Link><p>Nirva Character Universe · Canonical demo reference</p><span>© 2026 Nirvacore</span></footer>
+      <footer className="character-footer"><Link href="/">← Nirva Media</Link><Link href="/continuity">ดูที่มาของภาพและโค้ด →</Link><p>Nirva Character Universe · Canonical demo reference</p><span>© 2026 Nirvacore</span></footer>
     </main>
   );
 }

@@ -21,6 +21,15 @@
       "Counts exclude Git metadata and were measured against the source commit above."
     ]
   },
+  "fullCheckout": {
+    "status": "available_external_workspace_checkout",
+    "path": "../nirva-media-source",
+    "commit": "12b703434d724b1aff04675602d52356ee9c2198",
+    "notes": [
+      "This full checkout is the canonical local Claude source for auditing and extraction.",
+      "It is not bundled into the deployed Nirva Media product; reuse happens through explicit adapters and copied byte-verified assets."
+    ]
+  },
   "inventory": {
     "executable": [
       {
@@ -127,7 +136,7 @@
     ]
   },
   "capabilityTruth": {
-    "completeUpstreamSource": "not_present",
+    "completeUpstreamSource": "available_external_workspace_checkout",
     "languageRegistry": "active",
     "curatedStudioCopy": "active",
     "scriptDetection": "active",

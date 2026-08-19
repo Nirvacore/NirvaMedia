@@ -78,6 +78,7 @@ export default function Home() {
           <a href="#workflow">วิธีทำงาน</a>
           <a href="#language">ภาษา</a>
           <a href="/characters">ตัวละคร</a>
+          <a href="/continuity">ที่มางาน</a>
           <a href="#contact">สำหรับองค์กร</a>
         </nav>
         <a className="nav-cta" href="/studio">เปิด Studio <span>↗</span></a>

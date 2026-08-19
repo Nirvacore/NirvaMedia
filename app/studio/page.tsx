@@ -224,6 +224,26 @@ export default function StudioPage() {
     }
   }
 
+  async function transitionPost(post: StudioPost, status: "review" | "approved" | "draft") {
+    setError("");
+    try {
+      const response = await fetch(`/api/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "เปลี่ยนสถานะไม่สำเร็จ");
+      setPosts((current) => current.map((item) => item.id === post.id ? data.post : item));
+      setRecentCampaigns((current) => current.map((campaign) => ({
+        ...campaign,
+        posts: campaign.posts.map((item) => item.id === post.id ? data.post : item),
+      })));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "เปลี่ยนสถานะไม่สำเร็จ");
+    }
+  }
+
   async function translateFreeText() {
     setTranslationResult(null);
     if (!sourceText.trim()) {
@@ -404,7 +424,17 @@ export default function StudioPage() {
                 {posts.map((post) => (
                   <article className="post-card" key={post.id}>
                     <div className={`post-art ${artColors[post.channel] ?? "dark"}`}><span>N</span><small>{post.format}</small></div>
-                    <div className="post-content" lang={selectedLanguage.code} dir={selectedLanguage.rtl ? "rtl" : "ltr"}><div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span></div><h3>{post.title}</h3><p>{post.body}</p><div className="post-footer"><span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span><button className={post.status === "scheduled" ? "scheduled" : ""} disabled={post.status === "scheduled" || !canPublish} onClick={() => schedulePost(post)}>{post.status === "scheduled" ? "✓ ตั้งเวลาแล้ว" : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button></div></div>
+                    <div className="post-content" lang={selectedLanguage.code} dir={selectedLanguage.rtl ? "rtl" : "ltr"}>
+                      <div className="post-meta"><strong>{post.channel}</strong><span>{post.format}</span><b>{post.status}</b></div>
+                      <h3>{post.title}</h3><p>{post.body}</p>
+                      <div className="post-footer">
+                        <span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span>
+                        {post.status === "draft" && <button onClick={() => transitionPost(post, "review")}>ส่งตรวจ</button>}
+                        {post.status === "review" && <button onClick={() => transitionPost(post, "approved")}>อนุมัติ</button>}
+                        {post.status === "approved" && <button disabled={!canPublish} onClick={() => schedulePost(post)}>{canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button>}
+                        {post.status === "scheduled" && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
+                      </div>
+                    </div>
                   </article>
                 ))}
                 {posts.length === 0 && <div className="empty-output compact"><h3>ยังไม่มีร่างคอนเทนต์</h3><p>เลือกช่องทางอย่างน้อยหนึ่งช่องทาง แล้วสร้างแคมเปญใหม่</p></div>}
@@ -487,7 +517,7 @@ export default function StudioPage() {
           <p className="translation-disclaimer"><strong>ความจริงของระบบ:</strong> Source = <b>memory</b> หมายถึงใช้คำแปลที่บันทึกไว้, <b>provider</b> หมายถึง API ยืนยันการแปลจาก Provider ที่มี Credential, และ <b>unavailable</b> หมายถึงยังไม่มีคำแปล—ระบบจะไม่สร้างคำตอบจำลองขึ้นมาแทน</p>
         </section>
 
-        <footer className="studio-status"><span><i /> Nirva NLE registry connected</span><span>Language: {selectedLanguage.nativeName} · {selectedLanguage.name}{selectedLanguage.rtl ? " · RTL" : ""}</span><span>{scheduledCount} scheduled</span></footer>
+        <footer className="studio-status"><span><i /> Nirva NLE registry connected · Claude NMD rules active</span><a href="/continuity">Source continuity</a><span>Language: {selectedLanguage.nativeName} · {selectedLanguage.name}{selectedLanguage.rtl ? " · RTL" : ""}</span><span>{scheduledCount} scheduled</span></footer>
       </section>
     </main>
   );

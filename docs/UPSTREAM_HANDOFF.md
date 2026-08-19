@@ -1,6 +1,18 @@
 # Upstream handoff and continuation
 
-## What was preserved
+## Canonical full Claude checkout
+
+The complete Claude source checkout is available beside this product at
+`../nirva-media-source`, pinned to commit
+`12b703434d724b1aff04675602d52356ee9c2198`. Use it for audits and for selecting
+the next upstream module to adapt. Do not edit it from the Nirva Media product
+workflow.
+
+The active product now records every adopted module or image in
+`docs/source-provenance-registry.json` and exposes that registry at
+`GET /api/source-provenance`.
+
+## What was preserved in the product repository
 
 A selective snapshot of the original Nirva Media source from Claude is stored
 under `upstream/nirva-ai/` at source commit `12b7034`. It is not a complete
@@ -65,6 +77,10 @@ and is exposed by `GET /api/upstream-status`.
 - `/api/upstream-status` backed by a machine-readable executable, roadmap, and
   missing-source inventory
 - Clear repository boundaries and deployment configuration
+- A direct adapter for Claude `shared/media.ts`; the active Campaign Studio now
+  executes the original platform text rules and content status transitions
+- A Source Continuity page and registry that keep Claude, Codex, and user-owned
+  image/code provenance separate while showing where each artifact is active
 
 All future extraction from the upstream snapshot should happen through an
 explicit adapter or package so the preserved source remains unchanged.

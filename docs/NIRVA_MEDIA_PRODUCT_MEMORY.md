@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-08-04
+updated: 2026-08-19
 status: active-development
 tags:
   - nirva
@@ -32,6 +32,7 @@ global platforms from one workspace.
 - Campaign Studio: `https://nirva-media.jidlada-w.chatgpt.site/studio`
 - Connection Center source route: `/connections` (hosting rollout pending)
 - Original Claude repository: `https://github.com/Nirvacore/nirva-AI`
+- Complete Claude checkout: `../nirva-media-source` at commit `12b7034`
 - Preserved Claude snapshot: `upstream/nirva-ai/`
 - Upstream source branch: `claude/nirva-media-nle-vision-h0v1z0`
 - Upstream handoff commit: `12b7034`
@@ -69,6 +70,11 @@ reused.
 - Nirva Character Universe reference implementation: Nirva Media owns the
   rainbow Creator mascot, the founding eight-character lineup is design-ready,
   and a 16-product registry separates demo-active assets from registered concepts
+- Source Continuity registry and `/continuity` page connecting the complete
+  Claude checkout, preserved snapshot, active adapters, user references, and
+  Codex-generated assets with commit and SHA-256 provenance
+- Claude `shared/media.ts` now runs through `lib/upstream-media-adapter.ts` in
+  the active Campaign API and post approval/scheduling workflow
 - Selected original media modules, tests, Studio OS, mobile shell, SDKs, and
   roadmaps preserved under the upstream snapshot
 
@@ -163,6 +169,14 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-08-19: Corrected the source boundary after finding the complete Claude
+  checkout at `../nirva-media-source`. Added a machine-readable provenance
+  registry, copied the original PWA icons/screenshots byte-for-byte, and exposed
+  `/continuity` plus `/api/source-provenance`.
+- Replaced duplicated Campaign Studio rules with a direct adapter over Claude
+  `shared/media.ts`. Platform length/hashtag adaptation and the original
+  `draft → review → approved → scheduled` transition flow now execute in the
+  active D1-backed product.
 - 2026-08-12: Established the shared Nirva Character Universe. Added the
   canonical Nirva Media Creator asset, founding ecosystem lineup, `/characters`
   demo, typed registry, machine-readable registry, and cross-repository rollout

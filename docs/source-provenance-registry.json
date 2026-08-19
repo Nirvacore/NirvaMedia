@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-19",
+  "principle": "Preserve originals, reuse through explicit adapters, and label runtime truth.",
+  "sources": [
+    {
+      "id": "claude-full-source",
+      "kind": "git-checkout",
+      "creator": "Claude",
+      "status": "preserved-upstream",
+      "repository": "https://github.com/Nirvacore/nirva-AI",
+      "branch": "claude/nirva-media-nle-vision-h0v1z0",
+      "commit": "12b703434d724b1aff04675602d52356ee9c2198",
+      "localPath": "../nirva-media-source",
+      "contains": ["Nirva Studio OS", "NMD media engine", "NLE", "SDKs", "tests", "agent ecosystem"],
+      "runtimeTruth": "Full source checkout; individual modules still require their documented dependencies and passing tests."
+    },
+    {
+      "id": "claude-preserved-snapshot",
+      "kind": "repository-snapshot",
+      "creator": "Claude",
+      "status": "preserved-in-product",
+      "commit": "12b703434d724b1aff04675602d52356ee9c2198",
+      "localPath": "upstream/nirva-ai",
+      "contains": ["selected media code", "Studio OS", "mobile shell", "SDKs", "roadmaps"],
+      "runtimeTruth": "94-file selective snapshot; not a complete checkout."
+    },
+    {
+      "id": "claude-original-pwa-artifacts",
+      "kind": "image-collection",
+      "creator": "Claude upstream",
+      "status": "preserved-in-product",
+      "upstreamPath": "client/public/icons",
+      "localPath": "public/upstream/claude-icons",
+      "assets": [
+        { "file": "icon-72x72.png", "sha256": "31dc8d8d2351df1e749e9ab9c84f36bc7a62c7389d150422c5b7f1d2c82a27ec" },
+        { "file": "icon-96x96.png", "sha256": "3c60a78e57e6c9f6e39500b661705506d9e55797fdea67572167c49839e7479e" },
+        { "file": "icon-128x128.png", "sha256": "e5f07f28b4a483fcf6a2c0f6d7bfbf1c9903e3fa1606bcbe6f60342e49c8cabb" },
+        { "file": "icon-144x144.png", "sha256": "99093625775201f386e83be4c272f1bcebbb83a9b7fa5e27116959345e6f5473" },
+        { "file": "icon-152x152.png", "sha256": "a44d4cac1299c99a5310282d7c9cea675dee426eef647e5b2b9e0509c247bc74" },
+        { "file": "icon-192x192.png", "sha256": "940ede48f8f91a35d19429f8dfb51431a521b7884c6580eb5057870d37996994" },
+        { "file": "icon-384x384.png", "sha256": "80578e9d9ef132e5dacb17d0650c90c4a89e60c806224876ac5fc92f97f122df" },
+        { "file": "icon-512x512.png", "sha256": "965e8cbc7f18a9aa6fb02cc660b4f1c293fdb51823fb431e2c0f555da6ee0ddf" },
+        { "file": "screenshot-wide.png", "sha256": "6c86946a6a0f02f66cd2a13b6c6ffd8ce6aa3cfab50693ee3cca95c379503307" },
+        { "file": "screenshot-narrow.png", "sha256": "61f09f1e60b4a27bda0bd1021b7b69abe7292b954b4561cab6e562c3bef764e3" }
+      ],
+      "usedBy": ["/continuity"],
+      "runtimeTruth": "Original upstream PWA icons and screenshots are copied byte-for-byte and displayed as preserved artifacts."
+    },
+    {
+      "id": "claude-media-platform-core",
+      "kind": "code-module",
+      "creator": "Claude",
+      "status": "adapted-active",
+      "upstreamPath": "shared/media.ts",
+      "localPath": "upstream/nirva-ai/shared/media.ts",
+      "adapterPath": "lib/upstream-media-adapter.ts",
+      "sha256": "71f2347826ee8b55caf96e0b339f8cd724356da7104c3080cadfc467e7331dd0",
+      "usedBy": ["POST /api/campaigns", "PATCH /api/posts/:id"],
+      "runtimeTruth": "Claude platform adaptation and status-transition rules execute in the active site."
+    },
+    {
+      "id": "user-character-dna-reference",
+      "kind": "image-reference",
+      "creator": "Jidlada",
+      "status": "preserved-reference",
+      "localPath": "docs/brand-references/nirva-media-creator-dna-source.jpg",
+      "sha256": "96920b829cc7b920d9a269427285a338a8a5e17a75172ddcd4d34051a7a5a3a4",
+      "usedBy": ["Nirva Character System visual direction"]
+    },
+    {
+      "id": "codex-media-creator-v1",
+      "kind": "generated-image",
+      "creator": "Codex image generation",
+      "status": "demo-active",
+      "localPath": "public/characters/nirva-media-creator-v1.png",
+      "sha256": "b4e92439ca9139e2b8ab22a93c08aa187d9aeb346e6a720dd1d37603992070d5",
+      "derivedFrom": ["user-character-dna-reference"],
+      "usedBy": ["/", "/characters"]
+    },
+    {
+      "id": "codex-founding-lineup-v1",
+      "kind": "generated-image",
+      "creator": "Codex image generation",
+      "status": "design-ready",
+      "localPath": "public/characters/nirva-ecosystem-founders-v1.png",
+      "sha256": "219129115409b56e97c3f573b984e959809bf3dd72f6cc56af65383d878feba9",
+      "derivedFrom": ["user-character-dna-reference"],
+      "usedBy": ["/characters"]
+    },
+    {
+      "id": "codex-active-product",
+      "kind": "application",
+      "creator": "Codex continuing Claude source",
+      "status": "active-deployed",
+      "repository": "https://github.com/Nirvacore/NirvaMedia",
+      "branch": "codex/nirvamedia-web",
+      "localPath": ".",
+      "usedBy": ["https://nirva-media.jidlada-w.chatgpt.site"]
+    }
+  ]
+}
