@@ -2,7 +2,7 @@
 title: Current State Audit
 repository: Nirvacore/NirvaMedia
 audited_at: 2026-08-19
-audited_commit: 336193e7dcf60089065f6bd6592f336c021b25a2
+audited_commit: c7c6b31425821a03e08199417fb5660a23dd27c7
 status: phase-0-review
 ---
 
@@ -10,7 +10,7 @@ status: phase-0-review
 
 ## Audit rule
 
-Only executable source, schemas, manifests, tests, workflows, and deployment definitions at commit `336193e7dcf60089065f6bd6592f336c021b25a2` are treated as implementation evidence. Roadmaps and READMEs describe intent unless corroborated by source. No business code, schema, secret, or production configuration is changed by this audit.
+Only executable source, schemas, manifests, tests, workflows, and deployment definitions at commit `c7c6b31425821a03e08199417fb5660a23dd27c7` are treated as implementation evidence. Roadmaps and READMEs describe intent unless corroborated by source. No business code, schema, secret, or production configuration is changed by this audit.
 
 ## Repository snapshot
 
@@ -19,7 +19,9 @@ Only executable source, schemas, manifests, tests, workflows, and deployment def
 | Repository | Nirvacore/NirvaMedia |
 | Audited source branch | codex/nirvamedia-web |
 | Documentation branch | agent/phase-0-source-audit-20260819 |
-| Audited commit | 336193e7dcf60089065f6bd6592f336c021b25a2 |
+| Audited commit | c7c6b31425821a03e08199417fb5660a23dd27c7 |
+| Package manager | npm |
+| Repository shape | single product application with preserved upstream snapshot |
 | Strategic role | independent media product consuming intelligence capabilities |
 | Classification | KEEP_PRODUCT_WITH_EXPLICIT_ADAPTERS |
 | Stack | Next.js/vinext, React, Cloudflare D1, Drizzle, TypeScript, Vite |
@@ -42,7 +44,9 @@ Active Nirva Media web product with campaign studio, D1/Drizzle schema, translat
 | `docs/NIRVA_MEDIA_PRODUCT_MEMORY.md` | Dated truth boundary and implementation history. |
 | `db/schema.ts` | Campaign, entitlement, connector, publish-job, event, and translation-memory schema. |
 | `lib/upstream-media-adapter.ts` | Explicit adapter to preserved upstream logic. |
-| `upstream/nirva-ai` | Read-only preserved source snapshot. |
+| `upstream/nirva-ai` | Read-only preserved selective source snapshot. |
+| `upstream/nirva-ai-complete` | Complete upstream source vault preserved for provenance and exploration, not active product runtime. |
+| `docs/complete-source-manifest.json` | Machine-readable manifest for the complete preserved source vault. |
 | `tests` | Character, HTML, continuity, translation memory, and upstream audit tests. |
 | `.openai/hosting.json` | Sites/D1 deployment declaration. |
 
