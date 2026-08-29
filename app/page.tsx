@@ -42,9 +42,9 @@ const connectorFamilies = [
 
 const features = [
   { icon: "✦", title: "AI Content Studio", text: "เปลี่ยนไอเดียเดียวให้เป็นข้อความ ภาพ วิดีโอ เสียง และซับไตเติลที่พร้อมใช้" },
-  { icon: "◎", title: "Smart Publisher", text: "ปรับรูปแบบ ตั้งเวลา และเผยแพร่คอนเทนต์ไปทุกช่องทางจากพื้นที่เดียว" },
+  { icon: "◎", title: "Smart Publisher", text: "เตรียมรูปแบบและคิวเผยแพร่จากพื้นที่เดียว แล้วเชื่อมบัญชีจริงเมื่อผ่านการตั้งค่า" },
   { icon: "文", title: "Language Engine", text: "ทะเบียนภาษา 21 ภาษา พร้อมร่างคอนเทนต์หลายอักษรและการจัดวางภาษา RTL สำหรับ Arabic และ Hebrew" },
-  { icon: "↗", title: "Performance Intelligence", text: "ดูผลลัพธ์แบบรวม วิเคราะห์สิ่งที่ได้ผล และส่งข้อมูลกลับไปให้ AI พัฒนารอบต่อไป" },
+  { icon: "↗", title: "Performance Intelligence", text: "แสดงผลลัพธ์ที่ได้รับจากช่องทางที่เชื่อมแล้ว เพื่อให้ทีมวิเคราะห์ก่อนนำไปปรับรอบถัดไป" },
   { icon: "⌘", title: "Workflow Automation", text: "สร้างแคมเปญ ปฏิทินคอนเทนต์ และขั้นตอนอนุมัติที่ทำงานต่อเนื่องอัตโนมัติ" },
   { icon: "◫", title: "One Asset Library", text: "รวมแบรนด์ ไฟล์ ต้นฉบับ และเวอร์ชันทั้งหมดให้ทีมค้นหาและนำกลับมาใช้ได้ง่าย" },
 ];
@@ -90,15 +90,15 @@ export default function Home() {
         <div className="hero-copy">
           <div className="eyebrow"><span /> AI Content Operating System</div>
           <h1>หนึ่งไอเดีย<br /><em>ไปได้ทุกที่</em></h1>
-          <p className="hero-lead">สร้าง ปรับภาษา เผยแพร่ และวิเคราะห์คอนเทนต์ทุกช่องทางด้วย AI บนพื้นที่ทำงานเดียว</p>
+          <p className="hero-lead">ออกแบบ flow สำหรับสร้าง ปรับภาษา เผยแพร่ และวิเคราะห์คอนเทนต์ โดยเปิดใช้การเชื่อมต่อจริงเมื่อ Workspace ตั้งค่าและอนุมัติแล้ว</p>
           <div className="hero-actions">
             <a className="button primary" href="/studio">เปิด Campaign Studio <span>→</span></a>
             <a className="button ghost" href="#workflow"><span className="play">▶</span> ดูวิธีทำงาน</a>
           </div>
           <div className="hero-proof">
-            <div><strong>21</strong><span>ภาษาใน NLE Core</span></div>
-            <div><strong>30+</strong><span>ช่องทางเผยแพร่</span></div>
-            <div><strong>1</strong><span>พื้นที่ทำงานเดียว</span></div>
+            <div><strong>21</strong><span>ภาษาใน NLE registry</span></div>
+            <div><strong>{channels.length}</strong><span>ช่องทางในแผนเชื่อมต่อ</span></div>
+            <div><strong>1</strong><span>พื้นที่ทดลองผลิตภัณฑ์</span></div>
           </div>
         </div>
 
@@ -112,8 +112,8 @@ export default function Home() {
             </div>
             <div className="campaign-title">
               <div className="campaign-art"><span>N</span></div>
-              <div><small>กำลังสร้างแคมเปญ</small><h3>Tomorrow, simplified.</h3></div>
-              <span className="status">พร้อมใช้</span>
+              <div><small>ตัวอย่างหน้าจอแคมเปญ</small><h3>Tomorrow, simplified.</h3></div>
+              <span className="status">Preview</span>
             </div>
             <div className="channel-tabs" role="tablist" aria-label="เลือกช่องทางตัวอย่าง">
               {channels.slice(0, 4).map((channel) => (
@@ -134,18 +134,18 @@ export default function Home() {
               </div>
             </div>
             <div className="studio-bottom">
-              <span><b>✓</b> ปรับภาษาแล้ว</span>
-              <span><b>✓</b> ตรวจแบรนด์แล้ว</span>
-              <button>ตั้งเวลาโพสต์ <span>→</span></button>
+              <span><b>○</b> ตั้งค่าภาษาก่อนใช้งาน</span>
+              <span><b>○</b> รอการตรวจแบรนด์</span>
+              <span>เชื่อมบัญชีก่อนตั้งเวลาโพสต์</span>
             </div>
           </div>
-          <div className="floating-chip chip-one"><span>↗</span><div><small>Engagement</small><strong>+28.4%</strong></div></div>
-          <div className="floating-chip chip-two"><span>文</span><div><small>Language</small><strong>21 active languages</strong></div></div>
+          <div className="floating-chip chip-one"><span>↗</span><div><small>Engagement</small><strong>รอข้อมูลหลังเชื่อมต่อ</strong></div></div>
+          <div className="floating-chip chip-two"><span>文</span><div><small>Language registry</small><strong>21 ภาษาในทะเบียน</strong></div></div>
         </div>
       </section>
 
       <section className="channel-strip" aria-label="ช่องทางที่รองรับ">
-        <span>เผยแพร่จากที่เดียวไปยัง</span>
+        <span>วางแผนการเชื่อมต่อสำหรับ</span>
         <div>{channels.map((channel) => <b key={channel}>{channel}</b>)}</div>
       </section>
 

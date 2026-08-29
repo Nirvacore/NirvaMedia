@@ -18,6 +18,16 @@ test("server-renders the Nirva Media product page", async () => {
   assert.doesNotMatch(page, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
 });
 
+test("labels public campaign metrics as a preview until a real connection provides evidence", async () => {
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  assert.match(page, /ตัวอย่างหน้าจอแคมเปญ/);
+  assert.match(page, /รอข้อมูลหลังเชื่อมต่อ/);
+  assert.match(page, /เชื่อมบัญชีก่อนตั้งเวลาโพสต์/);
+  assert.match(page, /\{channels\.length\}/);
+  assert.doesNotMatch(page, /\+28\.4%/);
+  assert.doesNotMatch(page, /<span className="status">พร้อมใช้<\/span>/);
+});
+
 test("server-renders the Campaign Studio continuation", async () => {
   const page = await readFile(new URL("../app/studio/page.tsx", import.meta.url), "utf8");
   assert.match(page, /Campaign Studio/);
