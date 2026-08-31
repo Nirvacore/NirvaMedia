@@ -172,6 +172,13 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-08-19: Added the source-backed Phase 0 audit set under `docs/audit/`
+  and `docs/architecture/`. The ownership boundary remains unchanged: Nirva
+  Media owns campaign and publishing workflow state, consumes shared identity
+  and billing from the future platform, and consumes model, prompt, agent,
+  citation, and evaluation capabilities from the future intelligence layer
+  through explicit adapters. No product code, schema, deployment, or preserved
+  upstream source changed as part of this audit.
 - 2026-08-19: Corrected the source boundary after finding the complete Claude
   checkout at `../nirva-media-source`. Added a machine-readable provenance
   registry, copied the original PWA icons/screenshots byte-for-byte, and exposed
