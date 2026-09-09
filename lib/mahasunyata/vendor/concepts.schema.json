@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nirva.dev/protocol/mahasunyata/concepts.schema.json",
+  "title": "Mahasunyata canonical concept",
+  "description": "Canonical bilingual semantic contract for one Mahasunyata concept.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["concept_id", "version", "status", "canonical", "meaning", "not_meaning", "safeguards", "provenance"],
+  "properties": {
+    "concept_id": { "type": "string", "pattern": "^MSU-[A-Z]+(?:-[A-Z]+)*-[0-9]{3}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "status": { "type": "string", "enum": ["draft", "stable", "deprecated"] },
+    "canonical": { "$ref": "#/$defs/bilingualName" },
+    "meaning": { "$ref": "#/$defs/bilingualStatements" },
+    "not_meaning": { "$ref": "#/$defs/bilingualStatements" },
+    "safeguards": { "$ref": "#/$defs/bilingualStatements" },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_document", "source_version", "source_section", "steward", "reviewed_on"],
+      "properties": {
+        "source_document": { "type": "string", "minLength": 1 },
+        "source_version": { "type": "string", "minLength": 1 },
+        "source_section": { "type": "string", "minLength": 1 },
+        "steward": { "type": "string", "minLength": 1 },
+        "reviewed_on": { "type": "string", "format": "date" }
+      }
+    }
+  },
+  "$defs": {
+    "bilingualName": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["th", "en"],
+      "properties": {
+        "th": { "type": "string", "minLength": 1 },
+        "en": { "type": "string", "minLength": 1 }
+      }
+    },
+    "bilingualStatements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["th", "en"],
+      "properties": {
+        "th": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+        "en": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      }
+    }
+  }
+}

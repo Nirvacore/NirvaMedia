@@ -1,0 +1,15 @@
+{
+  "repository": "https://github.com/Nirvacore/nirva-docs",
+  "branch": "codex/mahasunyata-universal-os",
+  "commit": "cc54c720c2160aec3228d656e4495651a67a5efb",
+  "artifacts": {
+    "concepts.json": {
+      "path": "protocol/mahasunyata/concepts.json",
+      "sha256": "83cf1edeb437b52fc71ef909154e66460fdbf88f10cd91bd7fb513689e4732c8"
+    },
+    "concepts.schema.json": {
+      "path": "protocol/mahasunyata/concepts.schema.json",
+      "sha256": "abb9df0503e027ebb05f5af626ce67da8e561082405b4762ba637d878e74d129"
+    }
+  }
+}

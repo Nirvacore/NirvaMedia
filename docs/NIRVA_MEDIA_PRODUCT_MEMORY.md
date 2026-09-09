@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-08-19
+updated: 2026-09-09
 status: active-development
 tags:
   - nirva
@@ -41,6 +41,29 @@ The Nirva Media product now has its own GitHub repository. The Claude snapshot
 is preserved as upstream reference and must not be rewritten. New product work
 belongs in the active application, with explicit adapters when upstream code is
 reused.
+
+## Mahāśūnyatā reference customer and meaning ownership
+
+Mahāśūnyatā is **Reference Customer 001** for the universal Nirva platform.
+NirvaMedia consumes and presents its canonical concepts; it does not own or
+redefine their meaning. Canonical Thai/English names, meaning, non-meaning,
+safeguards, versions, and source provenance remain owned by `Nirvacore/nirva-docs`
+and its designated stewards outside NirvaMedia.
+
+The active read-only adapter in `lib/mahasunyata/` consumes exact vendored
+`concepts.json` and `concepts.schema.json` bytes from docs commit
+`cc54c720c2160aec3228d656e4495651a67a5efb`, branch
+`codex/mahasunyata-universal-os`. Repository, branch, commit, artifact paths,
+and SHA-256 hashes live separately in `vendor/source-provenance.json`.
+`GET /api/mahasunyata/concepts` returns the canonical envelope; optional
+`concept_id` and exact `version` query parameters select a record. Unknown
+IDs or versions return 404. The adapter validates the pinned schema and export
+metadata, rejects duplicate IDs, and freezes every nested runtime value.
+
+This ingestion does not establish translation approval or publication approval.
+Localization must preserve exact concept/version association, safeguards, and
+provenance; publication safeguards remain separate implementation work.
+The preserved Claude source under both `upstream/` directories stays unchanged.
 
 ## What is real today
 
