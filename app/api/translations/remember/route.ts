@@ -1,3 +1,4 @@
+import { guardLocalization, canonicalMemoryScope, CanonicalLocalizationError } from "../../../../lib/mahasunyata/localization-guard";
 import { and, eq } from "drizzle-orm";
 import { getDb } from "../../../../db";
 import { translationMemories, workspaceEntitlements } from "../../../../db/schema";
@@ -44,7 +45,8 @@ export async function rememberTranslation(request: Request) {
       return Response.json({ error: "sourceLanguage and targetLanguage must be supported language codes" }, { status: 400 });
     }
 
-    const sourceHash = await createTranslationMemoryKey(sourceLanguage, targetLanguage, sourceText);
+    const canonical = guardLocalization(payload.canonical, targetLanguage);
+    const sourceHash = await createTranslationMemoryKey(sourceLanguage, targetLanguage, sourceText, canonicalMemoryScope(canonical));
     const now = new Date();
     const memoryRow = {
       id: crypto.randomUUID(),
@@ -54,6 +56,7 @@ export async function rememberTranslation(request: Request) {
       targetLanguage,
       sourceText,
       translatedText,
+      canonical,
       source: "manual" as const,
       providerId: null,
       status: "active" as const,
@@ -68,6 +71,7 @@ export async function rememberTranslation(request: Request) {
         targetLanguage,
         sourceText,
         translatedText,
+        canonical,
         source: "manual",
         providerId: null,
         status: "active",
@@ -89,6 +93,7 @@ export async function rememberTranslation(request: Request) {
       {
         memory,
         translation: {
+          ...(canonical ? { canonical } : {}),
           text: translatedText,
           source: "memory",
           status: "remembered",
@@ -98,6 +103,7 @@ export async function rememberTranslation(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
     const message = error instanceof Error ? error.message : "Unexpected error";
     return Response.json({ error: message }, { status: 500 });
   }

@@ -1,3 +1,4 @@
+import { guardLocalization, CanonicalLocalizationError } from "../../../lib/mahasunyata/localization-guard";
 import { desc, inArray } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { campaignPosts, campaigns } from "../../../db/schema";
@@ -122,6 +123,7 @@ export async function GET() {
       })),
     });
   } catch (error) {
+    if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
@@ -129,6 +131,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const payload = (await request.json()) as {
+      canonical?: unknown;
       brief?: string;
       language?: string;
       tone?: string;
@@ -145,6 +148,7 @@ export async function POST(request: Request) {
     }
     if (!channels.length) return Response.json({ error: "at least one supported channel is required" }, { status: 400 });
 
+    const canonical = guardLocalization(payload.canonical, language);
     const db = getDb();
     const campaignId = crypto.randomUUID();
     const now = new Date();
@@ -156,6 +160,7 @@ export async function POST(request: Request) {
       return {
         id: crypto.randomUUID(),
         campaignId,
+        canonical,
         channel,
         format: template.format,
         title: localizedCopy.title,
@@ -197,6 +202,7 @@ export async function POST(request: Request) {
       },
     }, { status: 201 });
   } catch (error) {
+    if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ error: errorMessage(error) }, { status: 500 });
   }
 }
