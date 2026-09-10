@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-09-09
+updated: 2026-09-10
 status: active-development
 tags:
   - nirva
@@ -203,6 +203,13 @@ formats, limits, and errors.
    and customer-facing connection onboarding.
 
 ## Recent implementation
+
+- 2026-09-10: Repaired fresh local setup by adding `npm run db:local:migrate`
+  with an explicit local-only Wrangler configuration for the same D1 database
+  used by Vite. Verified all six migrations, repeat execution without changes,
+  and campaign creation through Studio. Local records survive application
+  restart in `.wrangler/state/v3/d1`. Production hosting is unchanged.
+
 
 - 2026-09-09: Added canonical localization guardrails around the existing
   21-language NLE and Translation Memory. Migration `0005_sudden_skreet.sql`
