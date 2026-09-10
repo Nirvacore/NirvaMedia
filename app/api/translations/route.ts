@@ -1,3 +1,4 @@
+import { guardLocalization, canonicalMemoryScope, validateMemoryAssociation, CanonicalLocalizationError } from "../../../lib/mahasunyata/localization-guard";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { translationMemories, workspaceEntitlements } from "../../../db/schema";
@@ -62,8 +63,14 @@ export async function GET(request: Request) {
       .orderBy(desc(translationMemories.updatedAt))
       .limit(limit);
 
-    return Response.json({ memories, provider: getTranslationProviderStatus() });
+    const validatedMemories = memories.map(memory => {
+      const canonical = guardLocalization(memory.canonical, memory.targetLanguage);
+      validateMemoryAssociation(memory.canonical, canonical);
+      return { ...memory, canonical };
+    });
+    return Response.json({ memories: validatedMemories, provider: getTranslationProviderStatus() });
   } catch (error) {
+    if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ error: storageError(error) }, { status: 500 });
   }
 }
@@ -97,9 +104,12 @@ export async function POST(request: Request) {
     if (!isSupportedNirvaLanguage(sourceLanguage) || !isSupportedNirvaLanguage(targetLanguage)) {
       return Response.json({ error: "sourceLanguage and targetLanguage must be supported language codes" }, { status: 400 });
     }
+    const canonical = guardLocalization(payload.canonical, targetLanguage);
+    const canonicalFields = canonical ? { canonical } : {};
     if (sourceLanguage === targetLanguage) {
       return Response.json({
         translation: {
+          ...canonicalFields,
           text: sourceText,
           source: "identity",
           status: "translated",
@@ -109,7 +119,7 @@ export async function POST(request: Request) {
     }
 
     const db = getDb();
-    const sourceHash = await createTranslationMemoryKey(sourceLanguage, targetLanguage, sourceText);
+    const sourceHash = await createTranslationMemoryKey(sourceLanguage, targetLanguage, sourceText, canonicalMemoryScope(canonical));
     const [memory] = await db
       .select()
       .from(translationMemories)
@@ -123,6 +133,7 @@ export async function POST(request: Request) {
       .limit(1);
 
     if (memory) {
+      validateMemoryAssociation(memory.canonical, canonical);
       await db
         .update(translationMemories)
         .set({
@@ -132,6 +143,7 @@ export async function POST(request: Request) {
         .where(eq(translationMemories.id, memory.id));
       return Response.json({
         translation: {
+          ...canonicalFields,
           text: memory.translatedText,
           source: "memory",
           status: "translated",
@@ -147,7 +159,7 @@ export async function POST(request: Request) {
     if (result.status === "unavailable") {
       return Response.json(
         {
-          translation: { text: null, source: "unavailable", status: "unavailable", cached: false },
+          translation: { ...canonicalFields, text: null, source: "unavailable", status: "unavailable", cached: false },
           provider: getTranslationProviderStatus(),
           message: "ยังไม่พบคำแปลใน Memory และยังไม่มี Credential สำหรับ Translation Provider",
           error: { code: "TRANSLATION_PROVIDER_UNAVAILABLE", message: "No translation provider credential is configured" },
@@ -158,7 +170,7 @@ export async function POST(request: Request) {
     if (result.status === "failed") {
       return Response.json(
         {
-          translation: { text: null, source: "unavailable", status: "failed", cached: false },
+          translation: { ...canonicalFields, text: null, source: "unavailable", status: "failed", cached: false },
           provider: { id: result.providerId, status: "error" },
           message: "Translation Provider ตอบกลับไม่สำเร็จ และระบบไม่ได้สร้างคำแปลจำลองแทน",
           error: { code: "TRANSLATION_PROVIDER_FAILED", message: result.reason },
@@ -176,6 +188,7 @@ export async function POST(request: Request) {
       targetLanguage,
       sourceText,
       translatedText: result.text,
+      canonical,
       source: "provider" as const,
       providerId: result.providerId,
       status: "active" as const,
@@ -187,6 +200,7 @@ export async function POST(request: Request) {
       target: [translationMemories.workspaceId, translationMemories.sourceHash],
       set: {
         translatedText: memoryRow.translatedText,
+        canonical,
         source: memoryRow.source,
         providerId: memoryRow.providerId,
         status: memoryRow.status,
@@ -196,6 +210,7 @@ export async function POST(request: Request) {
 
     return Response.json({
       translation: {
+        ...canonicalFields,
         text: result.text,
         source: "provider",
         status: "translated",
@@ -205,6 +220,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
     return Response.json({ error: storageError(error) }, { status: 500 });
   }
 }

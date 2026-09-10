@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-08-19
+updated: 2026-09-10
 status: active-development
 tags:
   - nirva
@@ -41,6 +41,38 @@ The Nirva Media product now has its own GitHub repository. The Claude snapshot
 is preserved as upstream reference and must not be rewritten. New product work
 belongs in the active application, with explicit adapters when upstream code is
 reused.
+
+## Mahāśūnyatā reference customer and meaning ownership
+
+Mahāśūnyatā is **Reference Customer 001** for the universal Nirva platform.
+NirvaMedia consumes and presents its canonical concepts; it does not own or
+redefine their meaning. Canonical Thai/English names, meaning, non-meaning,
+safeguards, versions, and source provenance remain owned by `Nirvacore/nirva-docs`
+and its designated stewards outside NirvaMedia.
+
+The active read-only adapter in `lib/mahasunyata/` consumes exact vendored
+`concepts.json` and `concepts.schema.json` bytes from docs commit
+`cc54c720c2160aec3228d656e4495651a67a5efb`, branch
+`codex/mahasunyata-universal-os`. Repository, branch, commit, artifact paths,
+and SHA-256 hashes live separately in `vendor/source-provenance.json`.
+`GET /api/mahasunyata/concepts` returns the canonical envelope; optional
+`concept_id` and exact `version` query parameters select a record. Unknown
+IDs or versions return 404. The adapter validates the pinned schema and export
+metadata, rejects duplicate IDs, and freezes every nested runtime value.
+
+This ingestion does not establish translation approval or publication approval.
+The active localization guard preserves exact concept/version association,
+safeguards and provenance through identity, provider and Translation Memory
+paths. Optional `canonical` envelopes are persisted on memory and campaign
+post records. Real post approval, scheduling and publish-job creation fail
+closed for canonical content with `configured-human-review-unavailable`.
+Structural preservation is not semantic approval. No trusted human review
+service is configured; manual memory status and client approval/reviewer flags
+cannot unlock canonical publishing. This conservative rule covers all canonical
+content, including policy and governance. Generic content retains its existing
+workflow. The next canonical-content priority is a trusted review process bound
+to the precise localized content, source version and reviewer authority.
+The preserved Claude source under both `upstream/` directories stays unchanged.
 
 ## What is real today
 
@@ -171,6 +203,35 @@ formats, limits, and errors.
    and customer-facing connection onboarding.
 
 ## Recent implementation
+
+- 2026-09-10: Studio ignores late translation/manual-memory responses after
+  source, language or manual-text edits, and late generation responses after
+  changing inputs or opening another campaign. Already-saved campaigns remain
+  in history. Existing UI and canonical approval restrictions are retained.
+  Twelve deferred-response component regressions cover the repaired behavior.
+
+
+- 2026-09-10: Studio regeneration now retains the loaded campaign's canonical
+  concept/version. Mixed associations fail closed. Canonical posts show their
+  pending semantic review and disable approval/scheduling while the trusted
+  review service is unavailable; server guards remain authoritative.
+
+
+- 2026-09-10: Repaired fresh local setup by adding `npm run db:local:migrate`
+  with an explicit local-only Wrangler configuration for the same D1 database
+  used by Vite. Verified all six migrations, repeat execution without changes,
+  and campaign creation through Studio. Local records survive application
+  restart in `.wrangler/state/v3/d1`. Production hosting is unchanged.
+
+
+- 2026-09-09: Added canonical localization guardrails around the existing
+  21-language NLE and Translation Memory. Migration `0005_sudden_skreet.sql`
+  persists immutable source envelopes on memory and campaign posts; it must be
+  applied with the application rollout. Canonical policy/governance drafts
+  remain pending and cannot be approved, scheduled or queued through the real
+  publication routes until trusted human review infrastructure is implemented.
+  The Campaign API still generates curated NLE previews, not verified semantic
+  translations. Canonical association never changes that capability claim.
 
 - 2026-08-19: Corrected the source boundary after finding the complete Claude
   checkout at `../nirva-media-source`. Added a machine-readable provenance

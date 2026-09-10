@@ -1,6 +1,8 @@
+import { canonicalPublicationBlock } from "../../../lib/mahasunyata/localization-guard";
 import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import {
+  campaignPosts,
   connectorAccounts,
   connectorEvents,
   publishJobs,
@@ -82,6 +84,15 @@ export async function POST(request: Request) {
     const requestedAccountId =
       typeof payload.connectorAccountId === "string" ? payload.connectorAccountId.trim() : "";
     const postId = typeof payload.postId === "string" ? payload.postId.trim() || null : null;
+    if (postId) {
+      const [post] = await db.select().from(campaignPosts).where(eq(campaignPosts.id, postId)).limit(1);
+      if (!post) return Response.json({ error: "post not found" }, { status: 404 });
+      const blocked = canonicalPublicationBlock(post.canonical);
+      if (blocked) return blocked;
+      if (post.channel !== channel) return Response.json({ error: "channel must match the saved post" }, { status: 400 });
+    }
+    const blocked = canonicalPublicationBlock(payload.canonical);
+    if (blocked) return blocked;
     const accountConditions = [
       eq(connectorAccounts.workspaceId, workspaceId),
       eq(connectorAccounts.connectorId, connectorId),
