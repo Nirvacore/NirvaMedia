@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-html-link-for-pages -- vinext client runtime currently duplicates React through next/link */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { channelsForConnectors } from "../../lib/product-catalog";
 import { getNirvaLanguage, NIRVA_LANGUAGE_COUNT, NIRVA_LANGUAGES } from "../../lib/nle/languages";
 
@@ -127,6 +127,23 @@ export default function StudioPage() {
   const [manualTranslation, setManualTranslation] = useState("");
   const [savingMemory, setSavingMemory] = useState(false);
 
+  // Responses belong to the input revision that started them. Editing or
+  // opening another campaign must not let an older request replace that view.
+  const campaignRevision = useRef(0);
+  const translationRevision = useRef(0);
+  const pendingRequests = useRef({ campaigns: 0, translations: 0, memories: 0 });
+
+  function invalidateCampaign() {
+    campaignRevision.current += 1;
+    setGenerated(false);
+  }
+
+  function invalidateTranslation() {
+    translationRevision.current += 1;
+    setTranslationResult(null);
+    setManualTranslation("");
+  }
+
   useEffect(() => {
     let active = true;
     Promise.all([fetch("/api/campaigns"), fetch("/api/entitlements"), fetch("/api/languages")])
@@ -151,17 +168,19 @@ export default function StudioPage() {
       .catch(() => {
         if (active) setError("ยังโหลดประวัติแคมเปญไม่ได้ กรุณาลองใหม่อีกครั้ง");
       });
-    return () => { active = false; };
+    return () => { active = false; campaignRevision.current += 1; translationRevision.current += 1; };
   }, []);
 
   function toggleChannel(channel: string) {
-    setGenerated(false);
+    invalidateCampaign();
     setChannels((current) => current.includes(channel)
       ? current.filter((item) => item !== channel)
       : [...current, channel]);
   }
 
   async function generateContent() {
+    const revision = ++campaignRevision.current;
+    pendingRequests.current.campaigns += 1;
     setSaving(true);
     setError("");
     try {
@@ -173,17 +192,20 @@ export default function StudioPage() {
       if (!response.ok) throw new Error("บันทึกแคมเปญไม่สำเร็จ");
       const data = await response.json();
       const campaign = data.campaign as CampaignSummary;
+      setRecentCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)].slice(0, 8));
+      if (revision !== campaignRevision.current) return;
       setPosts(campaign.posts);
       setGenerated(true);
-      setRecentCampaigns((current) => [campaign, ...current.filter((item) => item.id !== campaign.id)].slice(0, 8));
     } catch {
-      setError("สร้างและบันทึกคอนเทนต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      if (revision === campaignRevision.current) setError("สร้างและบันทึกคอนเทนต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
     } finally {
-      setSaving(false);
+      pendingRequests.current.campaigns -= 1;
+      setSaving(pendingRequests.current.campaigns > 0);
     }
   }
 
   function loadCampaign(campaign: CampaignSummary) {
+    campaignRevision.current += 1;
     setBrief(campaign.brief);
     setLanguage(campaign.language);
     setTone(campaign.tone);
@@ -248,6 +270,7 @@ export default function StudioPage() {
   }
 
   async function translateFreeText() {
+    const revision = ++translationRevision.current;
     setTranslationResult(null);
     if (!sourceText.trim()) {
       setTranslationResult({ text: "", source: "unavailable", message: "กรุณาใส่ข้อความต้นฉบับก่อนแปล" });
@@ -258,6 +281,7 @@ export default function StudioPage() {
       return;
     }
 
+    pendingRequests.current.translations += 1;
     setTranslating(true);
     try {
       const response = await fetch("/api/translations", {
@@ -266,6 +290,7 @@ export default function StudioPage() {
         body: JSON.stringify({ sourceText: sourceText.trim(), sourceLanguage, targetLanguage }),
       });
       const data = await response.json().catch(() => ({}));
+      if (revision !== translationRevision.current) return;
       const result = data.translation ?? data.result ?? data;
       const source = ["memory", "provider", "unavailable"].includes(result.source)
         ? result.source as TranslationSource
@@ -281,14 +306,17 @@ export default function StudioPage() {
         setTranslationResult({ text, source, message, memorySource: result.memorySource });
       }
     } catch {
-      setTranslationResult({ text: "", source: "unavailable", message: "ยังติดต่อระบบแปลไม่ได้ กรุณาลองใหม่ภายหลัง" });
+      if (revision === translationRevision.current) setTranslationResult({ text: "", source: "unavailable", message: "ยังติดต่อระบบแปลไม่ได้ กรุณาลองใหม่ภายหลัง" });
     } finally {
-      setTranslating(false);
+      pendingRequests.current.translations -= 1;
+      setTranslating(pendingRequests.current.translations > 0);
     }
   }
 
   async function saveManualTranslation() {
     if (!manualTranslation.trim()) return;
+    const revision = ++translationRevision.current;
+    pendingRequests.current.memories += 1;
     setSavingMemory(true);
     try {
       const response = await fetch("/api/translations/remember", {
@@ -302,6 +330,7 @@ export default function StudioPage() {
         }),
       });
       const data = await response.json().catch(() => ({}));
+      if (revision !== translationRevision.current) return;
       const result = data.translation ?? data.memory ?? data;
       if (!response.ok) throw new Error(data.error?.message ?? data.error ?? data.message ?? "บันทึก Memory ไม่สำเร็จ");
       setTranslationResult({
@@ -312,13 +341,14 @@ export default function StudioPage() {
       });
       setManualTranslation("");
     } catch (cause) {
-      setTranslationResult({
+      if (revision === translationRevision.current) setTranslationResult({
         text: "",
         source: "unavailable",
         message: cause instanceof Error ? cause.message : "บันทึก Translation Memory ไม่สำเร็จ",
       });
     } finally {
-      setSavingMemory(false);
+      pendingRequests.current.memories -= 1;
+      setSavingMemory(pendingRequests.current.memories > 0);
     }
   }
 
@@ -326,8 +356,7 @@ export default function StudioPage() {
     setSourceLanguage(targetLanguage);
     setTargetLanguage(sourceLanguage);
     if (translationResult?.text) setSourceText(translationResult.text);
-    setTranslationResult(null);
-    setManualTranslation("");
+    invalidateTranslation();
   }
 
   const scheduledCount = posts.filter((post) => post.status === "scheduled").length;
@@ -368,11 +397,11 @@ export default function StudioPage() {
             <div className="panel-heading"><div><span className="step-pill">01</span><h2>Campaign brief</h2></div><span className="autosave"><i /> {saving ? "กำลังบันทึก" : generated ? "บันทึกแล้ว" : "พร้อมบันทึก"}</span></div>
 
             <label className="field-label" htmlFor="brief">เป้าหมายแคมเปญ</label>
-            <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); setGenerated(false); }} />
+            <textarea id="brief" value={brief} onChange={(event) => { setBrief(event.target.value); invalidateCampaign(); }} />
 
             <div className="field-row">
-              <div><label className="field-label" htmlFor="language">ภาษาหลัก · NLE {NIRVA_LANGUAGE_COUNT} ภาษา {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} dir={selectedLanguage.rtl ? "rtl" : "ltr"} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); setGenerated(false); }}>{NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}{item.rtl ? " · RTL" : ""}</option>)}</select></div>
-              <div><label className="field-label" htmlFor="tone">น้ำเสียง</label><select id="tone" value={tone} onChange={(event) => { setTone(event.target.value); setGenerated(false); }}><option>อบอุ่นและมั่นใจ</option><option>มืออาชีพและกระชับ</option><option>สนุกและเป็นกันเอง</option><option>น่าเชื่อถือและจริงจัง</option></select></div>
+              <div><label className="field-label" htmlFor="language">ภาษาหลัก · NLE {NIRVA_LANGUAGE_COUNT} ภาษา {!canLocalize && "· ต้องมี Language Engine"}</label><select disabled={!canLocalize} dir={selectedLanguage.rtl ? "rtl" : "ltr"} id="language" value={language} onChange={(event) => { setLanguage(event.target.value); invalidateCampaign(); }}>{NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}{item.rtl ? " · RTL" : ""}</option>)}</select></div>
+              <div><label className="field-label" htmlFor="tone">น้ำเสียง</label><select id="tone" value={tone} onChange={(event) => { setTone(event.target.value); invalidateCampaign(); }}><option>อบอุ่นและมั่นใจ</option><option>มืออาชีพและกระชับ</option><option>สนุกและเป็นกันเอง</option><option>น่าเชื่อถือและจริงจัง</option></select></div>
             </div>
 
             <section className="language-readiness" aria-labelledby="language-readiness-title">
@@ -457,7 +486,7 @@ export default function StudioPage() {
             <div className="translation-pane">
               <div className="translation-pane-top">
                 <label htmlFor="source-language">ภาษาต้นฉบับ</label>
-                <select id="source-language" value={sourceLanguage} onChange={(event) => { setSourceLanguage(event.target.value); setTranslationResult(null); setManualTranslation(""); }}>
+                <select id="source-language" value={sourceLanguage} onChange={(event) => { setSourceLanguage(event.target.value); invalidateTranslation(); }}>
                   {NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}
                 </select>
               </div>
@@ -467,7 +496,7 @@ export default function StudioPage() {
                 lang={selectedSourceLanguage.code}
                 dir={selectedSourceLanguage.rtl ? "rtl" : "ltr"}
                 value={sourceText}
-                onChange={(event) => { setSourceText(event.target.value); setTranslationResult(null); setManualTranslation(""); }}
+                onChange={(event) => { setSourceText(event.target.value); invalidateTranslation(); }}
                 placeholder="พิมพ์หรือวางข้อความที่ต้องการแปล"
               />
               <small>{sourceText.length} ตัวอักษร · {selectedSourceLanguage.script}{selectedSourceLanguage.rtl ? " · RTL" : ""}</small>
@@ -478,7 +507,7 @@ export default function StudioPage() {
             <div className="translation-pane result-pane">
               <div className="translation-pane-top">
                 <label htmlFor="target-language">ภาษาปลายทาง</label>
-                <select id="target-language" value={targetLanguage} onChange={(event) => { setTargetLanguage(event.target.value); setTranslationResult(null); setManualTranslation(""); }}>
+                <select id="target-language" value={targetLanguage} onChange={(event) => { setTargetLanguage(event.target.value); invalidateTranslation(); }}>
                   {NIRVA_LANGUAGES.map((item) => <option key={item.code} value={item.code}>{item.nativeName} · {item.name}</option>)}
                 </select>
               </div>
@@ -502,7 +531,7 @@ export default function StudioPage() {
                   lang={selectedTargetLanguage.code}
                   dir={selectedTargetLanguage.rtl ? "rtl" : "ltr"}
                   value={manualTranslation}
-                  onChange={(event) => setManualTranslation(event.target.value)}
+                  onChange={(event) => { translationRevision.current += 1; setManualTranslation(event.target.value); }}
                   placeholder="ใส่คำแปลที่ผู้ตรวจภาษาอนุมัติแล้ว"
                 />
                 <div><small>ระบบจะบันทึกเฉพาะข้อความที่ผู้ใช้กรอก ไม่สร้างคำแปลแทน</small><button type="button" disabled={savingMemory || !manualTranslation.trim()} onClick={saveManualTranslation}>{savingMemory ? "กำลังบันทึก…" : "บันทึก Translation Memory"}<b>＋</b></button></div>

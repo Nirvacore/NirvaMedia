@@ -204,6 +204,13 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-10: Studio ignores late translation/manual-memory responses after
+  source, language or manual-text edits, and late generation responses after
+  changing inputs or opening another campaign. Already-saved campaigns remain
+  in history. Existing UI and canonical approval restrictions are retained.
+  Twelve deferred-response component regressions cover the repaired behavior.
+
+
 - 2026-09-10: Studio regeneration now retains the loaded campaign's canonical
   concept/version. Mixed associations fail closed. Canonical posts show their
   pending semantic review and disable approval/scheduling while the trusted
