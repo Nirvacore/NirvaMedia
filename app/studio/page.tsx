@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { channelsForConnectors } from "../../lib/product-catalog";
 import { getNirvaLanguage, NIRVA_LANGUAGE_COUNT, NIRVA_LANGUAGES } from "../../lib/nle/languages";
 
+import { canonicalForRegeneration, type StudioCanonical } from "../../lib/mahasunyata/studio";
+
 const allChannelOptions = [
   "Instagram", "Facebook", "WhatsApp Business", "Threads", "YouTube", "TikTok", "LINE OA", "X",
   "LinkedIn", "Telegram", "Pinterest", "Snapchat", "WeChat", "Douyin", "Weibo", "Xiaohongshu",
@@ -12,6 +14,7 @@ const allChannelOptions = [
 ];
 
 type StudioPost = {
+  canonical?: StudioCanonical | null;
   id: string;
   campaignId: string;
   channel: string;
@@ -165,7 +168,7 @@ export default function StudioPage() {
       const response = await fetch("/api/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ brief, language, tone, channels }),
+        body: JSON.stringify({ brief, language, tone, channels, canonical: canonicalForRegeneration(posts) }),
       });
       if (!response.ok) throw new Error("บันทึกแคมเปญไม่สำเร็จ");
       const data = await response.json();
@@ -430,8 +433,9 @@ export default function StudioPage() {
                       <div className="post-footer">
                         <span>◷ {post.scheduledAt ? formatDate(post.scheduledAt) : "ยังไม่ตั้งเวลา"}</span>
                         {post.status === "draft" && <button onClick={() => transitionPost(post, "review")}>ส่งตรวจ</button>}
-                        {post.status === "review" && <button onClick={() => transitionPost(post, "approved")}>อนุมัติ</button>}
-                        {post.status === "approved" && <button disabled={!canPublish} onClick={() => schedulePost(post)}>{canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button>}
+                        {post.canonical && <p role="note">รอตรวจความหมายโดยผู้รับผิดชอบ / Pending trusted semantic review — {post.canonical.concept_id} v{post.canonical.source_concept_version}</p>}
+                        {post.status === "review" && <button disabled={!!post.canonical} onClick={() => transitionPost(post, "approved")}>อนุมัติ</button>}
+                        {post.status === "approved" && <button disabled={!canPublish || !!post.canonical} onClick={() => schedulePost(post)}>{canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button>}
                         {post.status === "scheduled" && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
                       </div>
                     </div>

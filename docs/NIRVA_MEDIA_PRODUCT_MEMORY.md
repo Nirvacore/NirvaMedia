@@ -204,6 +204,12 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-10: Studio regeneration now retains the loaded campaign's canonical
+  concept/version. Mixed associations fail closed. Canonical posts show their
+  pending semantic review and disable approval/scheduling while the trusted
+  review service is unavailable; server guards remain authoritative.
+
+
 - 2026-09-10: Repaired fresh local setup by adding `npm run db:local:migrate`
   with an explicit local-only Wrangler configuration for the same D1 database
   used by Vite. Verified all six migrations, repeat execution without changes,
