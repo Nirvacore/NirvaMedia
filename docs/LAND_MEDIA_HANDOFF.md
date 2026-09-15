@@ -138,3 +138,43 @@ npm test
 The focused tests exercise actual adapter output, public-source tampering and
 private-field rejection, key-order independence, input/output isolation, the
 real local CLI, destination protection and oversized-input handling.
+
+## Making-amends guide companion · v0.1.0 · 2026-09-15
+
+The same local command now accepts the separately pinned `making-amends`
+guide. Use the checked-in public example:
+
+```sh
+npm run land:prepare -- --input tests/fixtures/land-public-guide.json --output /tmp/land-making-amends-review
+```
+
+For English, copy this packet to a new file and change only `language` from
+`th` to `en`. The destination must be new. The packet is a fixture of public
+editorial material, not a personal confession or a Community draft export.
+
+The guide uses `editorial-guide-handoff-not-published` and the distinct result
+format `nirva-media-guide-draft/v1`, with `guideId`, rather than adding a seventh
+Inner Space lesson. `vendor/land-guide-provenance.json` pins the canonical
+[guide at docs commit12f97f05cd2dd3ac889ce4f2fcead5d08608afce](https://github.com/Nirvacore/nirva-docs/blob/12f97f05cd2dd3ac889ce4f2fcead5d08608afce/docs/mahasunyata-land-making-amends.md),
+its original export/document digests and sorted-JSON guide hash.
+
+The adapter preserves three lenses (plain, thinking and Buddhist), sources,
+three fictional story steps, practice, the short boundary and full adult note.
+Narration is an assembly of existing title, summary, story steps and boundaries;
+it is text for review, not generated audio. All six exact apology templates
+remain `draft-needs-native-review` in structured output and the review document;
+they are not inserted into narration. Selecting TH/EN does not grant native
+review, voice or caption readiness. Other narration locales are rejected even
+when an illustrative template exists for that language.
+
+Complete content hashing rejects extra fields, personal text substituted into
+allowed fields, changed sources, removed boundaries and forged approvals before
+creating an output directory. Existing six-lesson behavior remains unchanged.
+The four files are local only; there is no Studio ingestion, provider request,
+account operation, publication or website deployment in this integration.
+Provider calls are zero; machine work and human review still have costs.
+Machine/power/subscription/review allocations are not measured or priced by this
+command, so no funded quota or full-cost claim follows from it.
+
+Infrastructure reference: [nirva-ops](https://github.com/Nirvacore/nirva-ops).
+Core integration reference: [nirvacore-v1](https://github.com/Nirvacore/nirvacore-v1).

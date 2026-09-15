@@ -1,0 +1,160 @@
+{
+  "version": "1.0.0",
+  "editorialSource": "https://github.com/Nirvacore/nirva-docs/blob/12f97f05cd2dd3ac889ce4f2fcead5d08608afce/docs/mahasunyata-land-making-amends.md",
+  "reviewedOn": "2026-09-15",
+  "language": "th",
+  "kind": "editorial-guide-handoff-not-published",
+  "guide": {
+    "id": "making-amends",
+    "title": {
+      "th": "ขอโทษ แล้วช่วยแก้ไข",
+      "en": "Say sorry and help repair"
+    },
+    "summary": {
+      "th": "หยุดสิ่งที่ทำให้เสียหาย ยอมรับสิ่งที่เราทำ และค่อยแก้ไขโดยไม่กดดันใคร",
+      "en": "Stop the harm, acknowledge what you did, and help repair it without pressuring anyone."
+    },
+    "steps": [
+      {
+        "th": "ตัวอย่างของ Land: ปันขีดทับรูปของเพื่อน แล้วหยุด",
+        "en": "A Land example: Pan draws over a friend’s picture, then stops."
+      },
+      {
+        "th": "ปันขอให้ผู้ใหญ่ที่ไว้ใจช่วยพูดขอโทษ",
+        "en": "Pan asks a trusted adult to help with saying sorry."
+      },
+      {
+        "th": "ถ้าเพื่อนยินยอม ปันช่วยวาดใหม่ และให้เพื่อนพักก่อนได้",
+        "en": "If the friend agrees, Pan helps redraw it and gives the friend time if needed."
+      }
+    ],
+    "gentleBoundary": {
+      "th": "ขอโทษไม่ลบสิ่งที่เกิดขึ้น และอีกฝ่ายไม่ต้องให้อภัย",
+      "en": "An apology does not erase what happened, and forgiveness is not owed."
+    },
+    "lenses": [
+      {
+        "id": "plain",
+        "title": {
+          "th": "แบบเข้าใจง่าย",
+          "en": "In everyday words"
+        },
+        "paragraphs": [
+          {
+            "th": "ในหน้านี้ Land ใช้ “ขอขมากรรม” เป็นคำชวนยอมรับการกระทำของตน แล้วดูว่าจะหยุดและแก้ไขอย่างไร ใช้คำว่า “ขอโทษและช่วยแก้ไข” แทนได้ โดยไม่ต้องเชื่อเรื่องศาสนา",
+            "en": "Here, Land uses “ขอขมากรรม” as an invitation to acknowledge our actions and consider how to stop and repair harm. You can simply call it “apologizing and making amends,” without adopting a religious belief."
+          },
+          {
+            "th": "คำขอโทษไม่ใช่ปุ่มลบอดีตหรือคำรับรองว่ากรรมหมดไป อีกฝ่ายเลือกไม่ตอบ ไม่พบ หรือไม่ให้อภัยได้ การแก้ไขต้องเคารพสิ่งที่เขายินยอม ไม่ใช่ทำให้เขาต้องปลอบใจเรา",
+            "en": "An apology is not an undo button or a promise that karma is erased. The other person may decline a reply, meeting or forgiveness. Repair respects what they welcome; it does not make them responsible for comforting us."
+          }
+        ]
+      },
+      {
+        "id": "thinking",
+        "title": {
+          "th": "มองความคิดและสิ่งที่ทำ",
+          "en": "Look at thoughts and actions"
+        },
+        "paragraphs": [
+          {
+            "th": "Land เปรียบนิสัยที่ทำซ้ำว่า “เหมือนโปรแกรม” เพื่อชวนสังเกตจังหวะเดิม หยุด และลองตอบต่างออกไป นี่เป็นอุปมา ไม่ใช่หลักฐานว่ากรรมคือรหัสคอมพิวเตอร์ หรือเอไอล้างความทรงจำและความรับผิดชอบได้",
+            "en": "Land compares repeated habits to a “program” to invite noticing a pattern, pausing and trying a different response. This is a metaphor, not evidence that karma is computer code or that AI can erase memories and responsibility."
+          },
+          {
+            "th": "คำของผู้ก่อตั้งว่า “ทุกสิ่งคือความว่าง” และ “ทุกศาสนาเป็นหนึ่ง” ในที่นี้ระบุเป็นอุปมาของ Land ไม่ใช่ข้อเท็จจริงทางวิทยาศาสตร์หรือคำสอนร่วมของทุกศาสนา ความต่างของประเพณี ความเจ็บปวด และสิทธิของคนยังมีความหมาย",
+            "en": "The founder’s phrases “everything is nothing” and “all religions are one” are labeled Land metaphors here, not scientific facts or teachings shared by every religion. Differences between traditions, people’s pain and their rights still matter."
+          }
+        ]
+      },
+      {
+        "id": "buddhist",
+        "title": {
+          "th": "อ่านในบริบทพุทธ",
+          "en": "Read in a Buddhist context"
+        },
+        "paragraphs": [
+          {
+            "th": "AN 6.63 กล่าวถึงเจตนาว่าเป็นกรรม และการกระทำโดยเจตนาทางกาย วาจา และใจ ข้อนี้เป็นบริบทของคำสอนพุทธ ไม่ใช่คำยืนยันอุปมาเรื่องโปรแกรมของ Land",
+            "en": "AN 6.63 identifies intention as kamma and describes intentional action through body, speech and mind. This Buddhist context does not establish Land’s program metaphor."
+          },
+          {
+            "th": "MN 61 สอนให้ทบทวนก่อน ระหว่าง และหลังการกระทำ รวมถึงหยุดเมื่อเห็นโทษ สำหรับการกระทำทางกายหรือวาจาที่ก่อโทษแล้ว กล่าวถึงการเปิดเผยต่อครูหรือเพื่อนผู้ปฏิบัติที่รอบคอบ และสำรวมต่อไป แบบฝึกของ Land ด้านล่างเป็นการประยุกต์ ไม่ใช่พิธีจากพระสูตรหรือคำสัญญาว่าลบผลกรรมได้",
+            "en": "MN 61 teaches reflection before, during and after actions, including stopping harmful action. After harmful bodily or verbal action, it describes acknowledgment to a teacher or an attentive fellow practitioner and future restraint. Land’s exercise below is an adaptation, not a scriptural rite or a promise to erase karmic results."
+          }
+        ]
+      }
+    ],
+    "practice": [
+      {
+        "th": "หยุดสิ่งที่ทำให้เสียหายก่อน แล้วแยกว่าเราทำอะไรจริง โดยไม่โทษตัวเองที่ถูกทำร้าย",
+        "en": "Stop the harm first. Identify your actual action; do not blame yourself for being harmed."
+      },
+      {
+        "th": "ถ้าปลอดภัยและอีกฝ่ายยินดีรับฟัง ค่อยบอกสิ่งที่เราทำและผลที่รู้จริง ไม่อ้างแก้ตัว",
+        "en": "Only if safe and welcome, describe your action and the harm you know about, without excuses."
+      },
+      {
+        "th": "ถามว่าเขาต้องการให้แก้อะไร รับคำว่า “ไม่” และไม่ขอคำตอบหรือคำให้อภัยซ้ำ ๆ",
+        "en": "Ask what repair they welcome. Accept “no”; do not keep asking for an answer or forgiveness."
+      },
+      {
+        "th": "ทำส่วนที่ตกลงไว้ ตรวจว่าทำร้ายซ้ำหรือไม่ และปรับวิธีครั้งต่อไป",
+        "en": "Do the agreed repair, check whether harm is repeating, and change what you do next time."
+      }
+    ],
+    "adultNote": {
+      "th": "เด็กขอผู้ใหญ่ที่ไว้ใจช่วยได้ ผู้ถูกทำร้ายไม่ต้องขอโทษหรือไปพบคนที่ทำร้ายตน หากการติดต่อไม่ปลอดภัย ไม่ต้องติดต่อเพื่อแบบฝึกนี้ ผู้ใหญ่ องค์กร และผู้มีอำนาจต้องหยุดการทำร้าย เคารพสิทธิ เยียวยา และเปิดให้ตรวจสอบ ไม่อ้างความตื่นรู้แทนความรับผิดชอบ ไม่บังคับเล่าเรื่องส่วนตัวหรือส่งคำสารภาพเข้าเว็บ",
+      "en": "Children can ask a trusted adult for help. Being harmed does not oblige anyone to apologize or meet the person who hurt them. Skip contact when unsafe. Adults, institutions and leaders remain responsible for stopping harm, protecting rights, remedy and review; claiming spiritual awakening cannot replace this. No one should be forced to disclose private experiences or submit confessions to this website."
+    },
+    "sources": [
+      {
+        "title": "AN 6.63 · Nibbedhika Sutta · dhammatalks.org",
+        "url": "https://www.dhammatalks.org/suttas/AN/AN6_63.html"
+      },
+      {
+        "title": "MN 61 · Ambalaṭṭhikā Rāhulovāda Sutta · dhammatalks.org",
+        "url": "https://www.dhammatalks.org/suttas/MN/MN61.html"
+      }
+    ],
+    "translations": [
+      {
+        "locale": "th",
+        "name": "ไทย",
+        "text": "ฉันทำ [สิ่งที่ทำ] และทำให้เกิด [ผลเสีย]\nฉันขอโทษและไม่ขอแก้ตัว\nถ้าคุณสะดวก มีอะไรที่คุณอยากให้ฉันช่วยแก้ไขไหม\nคุณไม่ต้องตอบหรือให้อภัย และฉันจะเคารพหากคุณไม่ต้องการติดต่อ",
+        "status": "draft-needs-native-review"
+      },
+      {
+        "locale": "en",
+        "name": "English",
+        "text": "I did [action], and it caused [harm]. I am sorry, and I am not making excuses. If you wish, what could I do to help repair the harm? You do not have to reply or forgive me, and I will respect any request for no contact.",
+        "status": "draft-needs-native-review"
+      },
+      {
+        "locale": "es",
+        "name": "Español",
+        "text": "Hice [acción] y causé [daño]. Lo siento y no voy a poner excusas. Si quieres, ¿hay algo que te gustaría que hiciera para reparar el daño? No tienes que responder ni perdonarme, y respetaré si no quieres más contacto.",
+        "status": "draft-needs-native-review"
+      },
+      {
+        "locale": "zh-Hans",
+        "name": "简体中文",
+        "text": "我做了[所做的事]，造成了[伤害]。对不起，我不会找借口。如果你愿意，有什么补救方式是你能接受的吗？你不必回复或原谅我；如果你不想再联系，我会尊重。",
+        "status": "draft-needs-native-review"
+      },
+      {
+        "locale": "hi",
+        "name": "हिन्दी",
+        "text": "मैंने [काम] किया, जिससे [नुकसान] हुआ। मुझे अपने किए पर खेद है; कोई बहाना नहीं है। अगर आप चाहें, तो बताएँ कि इसे सुधारने के लिए क्या करना आपको ठीक लगेगा। आपको जवाब देना या मुझे माफ़ करना ज़रूरी नहीं है; संपर्क न रखने के आपके फ़ैसले का भी सम्मान है।",
+        "status": "draft-needs-native-review"
+      },
+      {
+        "locale": "ar",
+        "name": "العربية",
+        "text": "فعلتُ [الفعل]، وتسببتُ في [الضرر]. أعتذر عمّا فعلت، ولا أقدّم أعذارًا. إن رغبت، فما الذي يمكنني فعله لتدارك الضرر بطريقة تقبلها؟ لا يلزمك الرد أو مسامحتي، وسأحترم رغبتك إن لم ترد أي تواصل.",
+        "status": "draft-needs-native-review"
+      }
+    ]
+  },
+  "containsPrivateNotes": false
+}

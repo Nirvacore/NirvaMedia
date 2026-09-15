@@ -204,6 +204,15 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-15: Extended the local Land preparation command to one separately
+  pinned making-amends guide from docs12f97f05cd2dd3ac889ce4f2fcead5d08608afce.
+  It produces the distinct guide draft format, preserves all three lenses,
+  full boundaries and six unreviewed templates; only TH/EN story text is
+  assembled for narration review. Exact public-source matching rejects
+  personal substitutions and client approval claims. Publication remains
+  blocked. No Studio/UI, provider, account, audio, pricing or hosting change.
+  See the making-amends section of `docs/LAND_MEDIA_HANDOFF.md`.
+
 - 2026-09-15: Extended the existing local Land handoff with a readiness
   contract reusing all 21 registered languages. Thai/English are curated text,
   other locales need translation, and all native-review gates remain pending.

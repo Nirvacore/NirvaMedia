@@ -1,0 +1,14 @@
+{
+  "owner": "nirva-docs",
+  "commit": "12f97f05cd2dd3ac889ce4f2fcead5d08608afce",
+  "path": "docs/mahasunyata-land-making-amends.md",
+  "editorialSource": "https://github.com/Nirvacore/nirva-docs/blob/12f97f05cd2dd3ac889ce4f2fcead5d08608afce/docs/mahasunyata-land-making-amends.md",
+  "documentSha256": "7bf1152cffbaf91333e3a3e00daf343037ca63cc126ec69d59b40d4ae07b8fba",
+  "exportSha256": "f7a39d2f754c30a16bbdc2a2bcf9fe203ca98faed0c371203deb9a9c7900e1cb",
+  "version": "0.1.0",
+  "review": "AI editorial review; human/native review pending",
+  "repository": "https://github.com/Nirvacore/nirva-docs",
+  "reviewedOn": "2026-09-15",
+  "guideSha256": "7fa8dce04aa5e53d1bfb00a7e356572c554084b0a72028979b436e462390132f",
+  "guideId": "making-amends"
+}

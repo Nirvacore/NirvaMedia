@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import provenance from './vendor/land-media-provenance.json' with { type: 'json' };
 import { getLearningLocaleReadiness, listLearningLocaleReadiness } from './learning-locale-readiness.ts';
+import { prepareLandGuideDraft } from './land-guide-handoff.ts';
 
 type Language = 'th' | 'en';
 type Words = Record<Language, string>;
@@ -27,6 +28,7 @@ function canonicalJson(value: unknown): string {
 
 /** Local-only consumer: exact public source matching precedes any media output. */
 export function prepareLandMediaDraft(value: unknown) {
+  if (object(value) && value.kind === 'editorial-guide-handoff-not-published') return prepareLandGuideDraft(value);
   const fields = ['version', 'editorialSource', 'reviewedOn', 'language', 'kind', 'lesson', 'narration', 'containsPrivateNotes'];
   if (!object(value) || Object.keys(value).length !== fields.length || fields.some(key => !Object.hasOwn(value, key)) ||
       value.version !== '1.0.0' || value.editorialSource !== provenance.editorialSource || value.reviewedOn !== provenance.reviewedOn ||
