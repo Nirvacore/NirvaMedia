@@ -1,0 +1,196 @@
+{
+  "schema_version": "0.1.0",
+  "source_schema": "concepts.schema.json",
+  "concepts": [
+    {
+      "concept_id": "MSU-GOV-ROLE-HUMILITY-001",
+      "version": "0.1.0",
+      "status": "stable",
+      "canonical": {
+        "th": "ความถ่อมตนในบทบาทหน้าที่",
+        "en": "Role Humility"
+      },
+      "meaning": {
+        "th": [
+          "ผู้มีอำนาจถือว่าอำนาจเป็นหน้าที่ดูแลเพื่อส่วนรวม ไม่ใช่อัตลักษณ์ส่วนบุคคล",
+          "ใช้อำนาจเท่าที่จำเป็น เปิดเผยผลประโยชน์ทับซ้อน และยอมรับการแก้ไขตามหลักฐาน",
+          "คุ้มครองสิทธิในการคัดค้าน การทบทวนโดยชอบด้วยกฎหมาย และการอุทธรณ์"
+        ],
+        "en": [
+          "Authority is a stewardship responsibility, not a personal identity.",
+          "Use no more power than necessary, disclose conflicts, and remain correctable by evidence.",
+          "Preserve dissent, lawful review, and appeal."
+        ]
+      },
+      "not_meaning": {
+        "th": [
+          "ไม่ใช่การยอมจำนนต่อศาสนาหรือผู้มีอำนาจ",
+          "ไม่ใช่การลดความรับผิดชอบ การบังคับให้เชื่อฟัง หรือทำให้การคุ้มครองทางกฎหมายอ่อนลง"
+        ],
+        "en": [
+          "It is not submission to a religion or authority.",
+          "It does not remove accountability, require obedience, or weaken legal protections."
+        ]
+      },
+      "safeguards": {
+        "th": [
+          "ต้องรักษาศักดิ์ศรี ความยินยอม ความโปร่งใส กระบวนการอันชอบธรรม และสิทธิอุทธรณ์",
+          "มนุษย์ต้องรับผิดชอบต่อการตัดสินใจ และไม่มี AI หรือสถาบันใดมีอำนาจถาวร"
+        ],
+        "en": [
+          "Preserve dignity, consent, transparency, due process, and appeal.",
+          "Human decision-makers remain accountable; no AI or institution receives permanent authority."
+        ]
+      },
+      "provenance": {
+        "source_document": "docs/superpowers/specs/2026-09-09-mahasunyata-universal-os-design.md",
+        "source_version": "0.1",
+        "source_section": "3. Governance Interpretation; 4. Non-Negotiable Safeguards",
+        "steward": "Nirva Docs",
+        "reviewed_on": "2026-09-09"
+      },
+      "source_file": "concepts/MSU-GOV-ROLE-HUMILITY-001.yaml"
+    },
+    {
+      "concept_id": "MSU-SUB-SIMPLIFY-001",
+      "version": "0.1.0",
+      "status": "stable",
+      "canonical": {
+        "th": "ลดทอนก่อนเพิ่มเติม",
+        "en": "Simplification Before Addition"
+      },
+      "meaning": {
+        "th": [
+          "ตรวจสอบและลดขั้นตอน ระบบ ข้อมูล และภาระที่ไม่จำเป็นหรือซ้ำซ้อนก่อนสร้างสิ่งใหม่",
+          "ยอมรับการลดทอนเมื่อสิทธิ ความปลอดภัย ความรับผิดชอบ และผลลัพธ์ที่จำเป็นยังคงอยู่หรือดีขึ้น"
+        ],
+        "en": [
+          "Examine and remove unnecessary or duplicated steps, systems, data, and burdens before adding new ones.",
+          "Accept a subtraction only when required rights, safety, accountability, and outcomes are retained or improved."
+        ]
+      },
+      "not_meaning": {
+        "th": [
+          "ไม่ใช่การลดบริการ สิทธิ การกำกับดูแล หรือความปลอดภัยเพียงเพื่อลดต้นทุน",
+          "ไม่ใช่ข้ออ้างเพื่อรวมศูนย์อำนาจหรือบังคับใช้แพลตฟอร์มเดียว"
+        ],
+        "en": [
+          "It is not cutting services, rights, oversight, or safety merely to reduce cost.",
+          "It is not a pretext for centralized power or a mandatory single platform."
+        ]
+      },
+      "safeguards": {
+        "th": [
+          "ประเมินผลกระทบ โหมดความล้มเหลว การย้อนกลับได้ และการเข้าถึงการอุทธรณ์ก่อนนำสิ่งใดออก",
+          "รักษาความเป็นส่วนตัว การใช้ข้อมูลเท่าที่จำเป็น พหุนิยม และอำนาจตัดสินใจระดับท้องถิ่น"
+        ],
+        "en": [
+          "Assess impact, failure modes, reversibility, and access to appeal before removal.",
+          "Preserve privacy, data minimization, pluralism, and local autonomy."
+        ]
+      },
+      "provenance": {
+        "source_document": "docs/superpowers/specs/2026-09-09-mahasunyata-universal-os-design.md",
+        "source_version": "0.1",
+        "source_section": "1. Purpose; 6. Subtraction Engine; 24. Design Principle for Codex and Agents",
+        "steward": "Nirva Docs",
+        "reviewed_on": "2026-09-09"
+      },
+      "source_file": "concepts/MSU-SUB-SIMPLIFY-001.yaml"
+    },
+    {
+      "concept_id": "MSU-TIME-RETURN-001",
+      "version": "0.1.0",
+      "status": "stable",
+      "canonical": {
+        "th": "การคืนเวลาให้มนุษย์",
+        "en": "Human Time Return"
+      },
+      "meaning": {
+        "th": [
+          "ลดเวลาที่ผู้คนเสียไปกับงาน ขั้นตอน การอนุมัติ และการกรอกข้อมูลซ้ำที่หลีกเลี่ยงได้",
+          "วัดเวลาที่คืนให้มนุษย์เป็นผลลัพธ์ของระบบ โดยไม่ลดสิทธิ ความปลอดภัย หรือความรับผิดชอบ"
+        ],
+        "en": [
+          "Reduce time people lose to avoidable work, steps, approvals, and repeated data entry.",
+          "Measure time returned to people as a system outcome without reducing rights, safety, or accountability."
+        ]
+      },
+      "not_meaning": {
+        "th": [
+          "ไม่ใช่การเร่งรัดที่ผลักภาระ ความเสี่ยง หรืองานที่ไม่ได้รับค่าตอบแทนไปยังผู้อื่น",
+          "ไม่ใช่การเฝ้าติดตามผลิตภาพหรือให้คะแนนบุคคล"
+        ],
+        "en": [
+          "It is not speed gained by shifting burden, risk, or unpaid work to others.",
+          "It is not productivity surveillance or scoring people."
+        ]
+      },
+      "safeguards": {
+        "th": [
+          "วัดผลแบบรวมและใช้ข้อมูลเท่าที่จำเป็น พร้อมคุ้มครองความเป็นส่วนตัว ความยินยอม และสิทธิอุทธรณ์",
+          "มนุษย์ต้องสามารถตรวจสอบและท้าทายการตัดสินใจอัตโนมัติที่กระทบสิทธิได้"
+        ],
+        "en": [
+          "Use aggregate, data-minimized measurement that preserves privacy, consent, and appeal.",
+          "People must be able to review and challenge automated decisions that affect their rights."
+        ]
+      },
+      "provenance": {
+        "source_document": "docs/superpowers/specs/2026-09-09-mahasunyata-universal-os-design.md",
+        "source_version": "0.1",
+        "source_section": "6. Subtraction Engine; 7. Human Time Return; 16. AI Roles",
+        "steward": "Nirva Docs",
+        "reviewed_on": "2026-09-09"
+      },
+      "source_file": "concepts/MSU-TIME-RETURN-001.yaml"
+    },
+    {
+      "concept_id": "MSU-VALUE-RETURN-001",
+      "version": "0.1.0",
+      "status": "stable",
+      "canonical": {
+        "th": "การคืนคุณค่า",
+        "en": "Value Return"
+      },
+      "meaning": {
+        "th": [
+          "คืนคุณค่าบางส่วนที่สร้างหรือได้รับกลับสู่ผู้คน ชุมชน ระบบ หรือธรรมชาติที่ทำให้คุณค่านั้นเกิดขึ้น",
+          "คุณค่าอาจอยู่ในรูปเงิน เวลา ความรู้ การเข้าถึง ทรัพยากร หรือการฟื้นฟู และต้องตรวจสอบได้"
+        ],
+        "en": [
+          "Return part of the value created or received to the people, communities, systems, or nature that enabled it.",
+          "Value may be money, time, knowledge, access, resources, or regeneration, and must be auditable."
+        ]
+      },
+      "not_meaning": {
+        "th": [
+          "ไม่ใช่การบังคับให้ให้ การยึดทรัพย์ หรือการจัดสรรคะแนนคุณค่าของบุคคล",
+          "ไม่ใช่คริปโทเคอร์เรนซี โทเคน หรือคะแนนสังคมสากล"
+        ],
+        "en": [
+          "It is not forced giving, confiscation, or an assignment of a person's worth.",
+          "It is not a cryptocurrency, token, or universal social score."
+        ]
+      },
+      "safeguards": {
+        "th": [
+          "การคืนคุณค่าต้องมีความยินยอม โปร่งใส ตรวจสอบได้ และเคารพสิทธิในทรัพย์สินตามกฎหมาย",
+          "ห้ามใช้ข้อมูลเพื่อจัดอันดับคุณค่าที่แท้จริงของมนุษย์หรือชักจูงทางการเมืองอย่างลับ ๆ"
+        ],
+        "en": [
+          "Value return must be consensual, transparent, auditable, and respect lawful property rights.",
+          "Data must not rank intrinsic human worth or enable covert political persuasion."
+        ]
+      },
+      "provenance": {
+        "source_document": "docs/superpowers/specs/2026-09-09-mahasunyata-universal-os-design.md",
+        "source_version": "0.1",
+        "source_section": "2. Core Principle; 4. Non-Negotiable Safeguards; 5.2 Economic OS; 23. Explicit Non-Goals",
+        "steward": "Nirva Docs",
+        "reviewed_on": "2026-09-09"
+      },
+      "source_file": "concepts/MSU-VALUE-RETURN-001.yaml"
+    }
+  ]
+}

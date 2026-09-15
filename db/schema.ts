@@ -1,3 +1,4 @@
+import type { CanonicalLocalization } from "../lib/mahasunyata/localization-guard";
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export type ConnectorAccountStatus = "setup_required" | "connected" | "error";
@@ -32,6 +33,7 @@ export const campaignPosts = sqliteTable(
     title: text("title").notNull(),
     body: text("body").notNull(),
     scheduledAt: text("scheduled_at"),
+    canonical: text("canonical", { mode: "json" }).$type<CanonicalLocalization>(),
     status: text("status").notNull().default("draft"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
@@ -137,6 +139,7 @@ export const translationMemories = sqliteTable(
     targetLanguage: text("target_language").notNull(),
     sourceText: text("source_text").notNull(),
     translatedText: text("translated_text").notNull(),
+    canonical: text("canonical", { mode: "json" }).$type<CanonicalLocalization>(),
     source: text("source").$type<TranslationMemorySource>().notNull(),
     providerId: text("provider_id"),
     status: text("status").$type<TranslationMemoryStatus>().notNull().default("active"),
