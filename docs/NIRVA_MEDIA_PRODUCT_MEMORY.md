@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-09-10
+updated: 2026-09-15
 status: active-development
 tags:
   - nirva
@@ -204,6 +204,14 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
+  source evidence alongside the later canonical-content guardrails below.
+  Its future architecture and migration sections remain proposals, not an
+  approved cutover or proof of current deployment. GitHub is the founder-
+  approved primary source/review host (2026-09-11); this documentation merge
+  does not deploy, migrate records, change product ownership, or update the
+  separate Obsidian mirror.
+
 - 2026-09-10: Studio ignores late translation/manual-memory responses after
   source, language or manual-text edits, and late generation responses after
   changing inputs or opening another campaign. Already-saved campaigns remain
@@ -233,6 +241,13 @@ formats, limits, and errors.
   The Campaign API still generates curated NLE previews, not verified semantic
   translations. Canonical association never changes that capability claim.
 
+- 2026-08-19: Added the source-backed Phase 0 audit set under `docs/audit/`
+  and `docs/architecture/`. The ownership boundary remains unchanged: Nirva
+  Media owns campaign and publishing workflow state, consumes shared identity
+  and billing from the future platform, and consumes model, prompt, agent,
+  citation, and evaluation capabilities from the future intelligence layer
+  through explicit adapters. No product code, schema, deployment, or preserved
+  upstream source changed as part of this audit.
 - 2026-08-19: Corrected the source boundary after finding the complete Claude
   checkout at `../nirva-media-source`. Added a machine-readable provenance
   registry, copied the original PWA icons/screenshots byte-for-byte, and exposed
