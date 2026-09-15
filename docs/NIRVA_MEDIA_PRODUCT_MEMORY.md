@@ -204,6 +204,17 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-15: Extended the existing local Land handoff with a readiness
+  contract reusing all 21 registered languages. Thai/English are curated text,
+  other locales need translation, and all native-review gates remain pending.
+  Script, voice and timed-caption readiness are distinct; Arabic/Hebrew reuse
+  RTL registry metadata. Translation digests are draft declarations and cannot
+  grant approval. No paid provider, account or entitlement changes were made.
+  The canonical [global language policy](https://github.com/Nirvacore/nirva-docs/blob/3ce2139e24dc3cf6cfbabf1fa9c9c025b77fa692/docs/nirva-global-learning-language-policy.md)
+  and [shared economics policy](https://github.com/Nirvacore/nirva-docs/blob/3ce2139e24dc3cf6cfbabf1fa9c9c025b77fa692/docs/nirva-project-economics.md)
+  remain owned by nirva-docs. See `docs/LAND_MEDIA_HANDOFF.md` for the explicit
+  limits and trusted-review evidence still needed.
+
 - 2026-09-15: Added a local Land public lesson consumer in
   `lib/mahasunyata/land-media-handoff.ts`, available through
   `npm run land:prepare -- --input packet.json --output new-directory`.

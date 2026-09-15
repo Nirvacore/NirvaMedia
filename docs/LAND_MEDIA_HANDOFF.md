@@ -87,10 +87,51 @@ must not affect a person's worth or spiritual standing. Cross-project cost
 sharing belongs in an explicit funding agreement, not hidden cross-subsidy or
 automatic publication.
 
+The canonical [shared project economics policy](https://github.com/Nirvacore/nirva-docs/blob/3ce2139e24dc3cf6cfbabf1fa9c9c025b77fa692/docs/nirva-project-economics.md)
+owns the funding boundary. This adapter does not calculate prices or grant
+free allowances.
+
+## Global language readiness
+
+Each prepared `media-draft.json` now contains `localeReadiness` for its current
+language and `localizationTargets` for the existing 21-language Nirva registry.
+The reusable implementation is `lib/mahasunyata/learning-locale-readiness.ts`.
+It consumes the canonical [global learning language policy](https://github.com/Nirvacore/nirva-docs/blob/3ce2139e24dc3cf6cfbabf1fa9c9c025b77fa692/docs/nirva-global-learning-language-policy.md),
+separately from the unchanged lesson-source commit.
+
+- Thai and English have curated public lesson text. A native-language reviewer
+  has not been verified by this service; these are not native-reviewed claims.
+- Other registry entries describe candidate language capabilities, not
+  translated learning content. Chinese, Spanish, Hindi and Arabic are initial
+  expansion candidates under the policy, not completed releases.
+- Writing-system metadata comes from the existing registry. Arabic and Hebrew
+  carry `rtl`; this is layout direction, not evidence of linguistic quality.
+- Script text, voice and timed captions have separate statuses. The lesson
+  handoff has no generated voice or timed caption artifact. The separate Land
+  introduction's captions do not make every lesson caption-ready.
+- A translation descriptor may identify the exact source commit, lesson ID and
+  translated-content SHA-256. It is caller-declared draft metadata, not proof
+  that an artifact exists or has been reviewed. Private text, extra fields and
+  client claims of review or publication approval are rejected.
+
+All locales keep `externalPublishEligible: false`. There is no trusted native
+review service. Its future evidence must bind the exact source revision,
+target locale and artifact digest to a verified reviewer identity and native
+language competence, a dated outcome, and checks for meaning, natural tone,
+source-versus-Land attribution and local cultural context. Narration also
+needs pronunciation and redistribution-rights review; captions need timing
+and accessibility review. Caller-provided names or checkboxes cannot unlock
+the existing canonical publishing restrictions.
+
+This readiness contract performs no translation or speech call. The existing
+provider adapter and Translation Memory are unchanged. Provider-wide token
+budgets, actual usage accounting and incomplete-output handling remain a
+separate integration; this change does not claim those costs are measured.
+
 ## Verification
 
 ```sh
-node --experimental-strip-types --test tests/land-media-handoff.test.mjs
+node --experimental-strip-types --test tests/land-media-handoff.test.mjs tests/learning-locale-readiness.test.mjs
 npm test
 ```
 

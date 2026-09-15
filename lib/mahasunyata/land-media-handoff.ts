@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import provenance from './vendor/land-media-provenance.json' with { type: 'json' };
+import { getLearningLocaleReadiness, listLearningLocaleReadiness } from './learning-locale-readiness.ts';
 
 type Language = 'th' | 'en';
 type Words = Record<Language, string>;
@@ -53,6 +54,8 @@ export function prepareLandMediaDraft(value: unknown) {
       handoffKind: value.kind,
     },
     lessonId: lesson.id, language,
+    localeReadiness: getLearningLocaleReadiness(lesson.id, language),
+    localizationTargets: listLearningLocaleReadiness(lesson.id),
     localization: 'selected-existing-language-no-generated-translation',
     containsPrivateNotes: false,
     content: {
