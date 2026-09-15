@@ -204,6 +204,20 @@ formats, limits, and errors.
 
 ## Recent implementation
 
+- 2026-09-15: Added a local Land public lesson consumer in
+  `lib/mahasunyata/land-media-handoff.ts`, available through
+  `npm run land:prepare -- --input packet.json --output new-directory`.
+  It checks exact public lesson and narration content against the reviewed
+  nirva-docs source at `b45b2334548785fd727141c8d0950bb51514aefa`, then prepares
+  text narration, storyboard and source-separated review files. All output
+  remains draft with publication blocked. No private notes, provider calls,
+  speech generation, D1 import, entitlements or social actions are accepted or
+  enabled. See `docs/LAND_MEDIA_HANDOFF.md`. The current Studio's generic
+  preview generator is not a lesson importer; trusted review and a provenance-
+  preserving Studio ingestion path remain future work. Free contributor
+  usage is an unpriced proposal pending a capped budget and explicit terms,
+  without moral points, social scores or tokens.
+
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.
   Its future architecture and migration sections remain proposals, not an

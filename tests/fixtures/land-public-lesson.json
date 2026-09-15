@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "editorialSource": "https://github.com/Nirvacore/nirva-docs/blob/b45b2334548785fd727141c8d0950bb51514aefa/docs/mahasunyata-land-inner-space.md",
+  "reviewedOn": "2026-09-15",
+  "language": "en",
+  "kind": "editorial-handoff-not-published",
+  "lesson": {
+    "id": "emptiness",
+    "symbol": "◌",
+    "title": {
+      "th": "ความว่างที่ยังดูแลชีวิต",
+      "en": "Emptiness that leaves room for care"
+    },
+    "summary": {
+      "th": "ลองมองประสบการณ์ โดยไม่รีบจับทุกอย่างมาเป็นเราและของเรา",
+      "en": "Meet an experience without immediately making it me or mine."
+    },
+    "tradition": {
+      "th": "สุญญสูตร SN 35.85 กล่าวถึงตา หู และประสบการณ์ทางอายตนะว่า ว่างจากตัวตนและสิ่งที่เป็นของตน ส่วนมหาสุญญตสูตร MN 122 กล่าวถึงการอยู่ด้วยความว่าง และการพิจารณาความคิดกับถ้อยคำที่เอื้อต่อความหลุดพ้น",
+      "en": "SN 35.85 describes the senses and sensory experience as empty of self or what belongs to self. MN 122 discusses dwelling in emptiness and attending to thoughts and speech conducive to release."
+    },
+    "lens": {
+      "th": "ใน Land เราลองใช้คำถามว่า สิ่งที่เกิดขึ้นคืออะไร และเราเติมคำว่า “ฉัน” หรือ “ของฉัน” ตรงไหน การเว้นช่องว่างระหว่างเหตุการณ์กับเรื่องที่เล่าต่อ อาจเปิดทางให้ตอบอย่างรอบคอบขึ้น",
+      "en": "In Land we ask: what happened, and where did I add me or mine? A little room between an event and the story we add may allow a more considered response."
+    },
+    "boundary": {
+      "th": "ความว่างในที่นี้ไม่ใช่ข้อสรุปว่าไม่มีอะไรอยู่จริง หรือสิทธิและความเจ็บปวดของใครไม่มีความหมาย ชื่อโครงการ Mahāśūnyatā Land ก็ไม่ใช่ตัวพระสูตร",
+      "en": "This is not a blanket claim that nothing exists or that rights and suffering do not matter. The project Mahāśūnyatā Land is distinct from the sutta."
+    },
+    "scenes": [
+      {
+        "th": "มีข้อความว่า “รายงานยังไม่ครบ”",
+        "en": "A message says: “The report is incomplete.”"
+      },
+      {
+        "th": "ใจเล่าต่อว่า “เขาดูถูกฉัน”",
+        "en": "The mind adds: “They disrespect me.”"
+      },
+      {
+        "th": "แยกข้อความที่เห็น ออกจากความหมายที่เติม",
+        "en": "Separate the message from the meaning added."
+      },
+      {
+        "th": "ถามว่า “ส่วนไหนที่ยังขาดอยู่?”",
+        "en": "Ask: “Which part is still missing?”"
+      }
+    ],
+    "practice": [
+      {
+        "th": "นึกถึงเหตุการณ์ธรรมดาที่ไม่หนักเกินไปหนึ่งเรื่อง",
+        "en": "Choose one ordinary, manageable event."
+      },
+      {
+        "th": "เขียนสิ่งที่สังเกตได้หนึ่งบรรทัด แล้วเขียนการตีความอีกหนึ่งบรรทัด",
+        "en": "Write one observed fact and one interpretation on separate lines."
+      },
+      {
+        "th": "เลือกคำถามหนึ่งข้อที่ช่วยให้เข้าใจ ก่อนรีบตอบโต้",
+        "en": "Choose one clarifying question before responding."
+      }
+    ],
+    "questions": [
+      {
+        "th": "ส่วนใดเป็นสิ่งที่เห็น และส่วนใดยังเป็นข้อสันนิษฐาน?",
+        "en": "What was observed, and what remains an assumption?"
+      },
+      {
+        "th": "ถ้าคลายคำว่า “ของฉัน” ลงเล็กน้อย ยังต้องดูแลอะไรอยู่?",
+        "en": "With a little less “mine,” what still needs care?"
+      }
+    ],
+    "sources": [
+      {
+        "title": "SN 35.85 · Suñña — Thanissaro Bhikkhu",
+        "url": "https://www.dhammatalks.org/suttas/SN/SN35_85.html"
+      },
+      {
+        "title": "MN 122 · Mahā Suññata — Thanissaro Bhikkhu",
+        "url": "https://www.dhammatalks.org/suttas/MN/MN122.html"
+      }
+    ]
+  },
+  "narration": "Emptiness that leaves room for care. The source says: SN 35.85 describes the senses and sensory experience as empty of self or what belongs to self. MN 122 discusses dwelling in emptiness and attending to thoughts and speech conducive to release. Land’s interpretation: In Land we ask: what happened, and where did I add me or mine? A little room between an event and the story we add may allow a more considered response. This is not a blanket claim that nothing exists or that rights and suffering do not matter. The project Mahāśūnyatā Land is distinct from the sutta.",
+  "containsPrivateNotes": false
+}

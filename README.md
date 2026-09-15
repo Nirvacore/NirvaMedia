@@ -44,3 +44,11 @@ hosting continues to use `.openai/hosting.json` and the Vite binding configurati
 The Studio produces curated starter drafts, not a live generative provider.
 Canonical content remains pending trusted review; external publishing and
 provider translation still require their separate integrations.
+
+## Land learning media preparation
+
+Prepare a reviewed-source public lesson packet locally with
+`npm run land:prepare -- --input packet.json --output new-directory`.
+The result is a draft review packet, narration text and storyboard, with no
+provider calls or social publication. See [the handoff guide](docs/LAND_MEDIA_HANDOFF.md)
+for the ready-to-run example and source/privacy contract.

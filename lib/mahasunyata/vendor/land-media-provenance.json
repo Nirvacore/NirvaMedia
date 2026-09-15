@@ -1,0 +1,20 @@
+{
+  "version": "1.0.0",
+  "owner": "nirva-docs",
+  "repository": "https://github.com/Nirvacore/nirva-docs",
+  "commit": "b45b2334548785fd727141c8d0950bb51514aefa",
+  "path": "docs/mahasunyata-land-inner-space.md",
+  "editorialSource": "https://github.com/Nirvacore/nirva-docs/blob/b45b2334548785fd727141c8d0950bb51514aefa/docs/mahasunyata-land-inner-space.md",
+  "reviewedOn": "2026-09-15",
+  "documentSha256": "668489107fcb31635d0a5a8cfc66f5d3db001b0ef8ea9931f5b19572608a88c2",
+  "datasetSha256": "b972eff682c612b07dc35d70af052bec38ff05b6dc88fcb9dba26fd80b99a0f8",
+  "lessonHashFormat": "sha256-of-recursively-key-sorted-json-utf8",
+  "lessonSha256": {
+    "emptiness": "0e1bd2d5704d9eaaed9aa42c23a93bb49f84a74ad59e39e5964b3a1efede61d6",
+    "unclinging": "260346527f9f782413a4784f0aa71fb5ed56b9f1f325455fa60059ff75619f96",
+    "mind-speech-action": "036dea9d7d6ec5dc9549fbd9acaf21a2e38dacfa19fffa19db6356213a912a23",
+    "new-earth": "adc7cb73122c1a87f41fe63fd9138590122bdd582de8737b8caa980ced05962b",
+    "world-traditions": "cac1470d2401e70ca07f594ff98e52a3a7f7984b9849ef752ceec63f6f0b2bb5",
+    "less-work-more-life": "2d2d4a718252d94a013737efe02194c368e2a8d72c08cf3bff3aa86d120f316f"
+  }
+}
