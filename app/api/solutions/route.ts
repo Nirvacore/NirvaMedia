@@ -1,7 +1,10 @@
 import { desc } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { solutionConfigs } from "../../../db/schema";
+import { internalErrorResponse } from "../../../lib/api-errors";
 import { connectorIds, moduleIds, productBundles } from "../../../lib/product-catalog";
+
+const storageNotReady = "Solution storage is being prepared. Please retry shortly.";
 
 export async function GET() {
   try {
@@ -9,8 +12,7 @@ export async function GET() {
     const solutions = await db.select().from(solutionConfigs).orderBy(desc(solutionConfigs.createdAt)).limit(12);
     return Response.json({ solutions });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ error: message }, { status: 500 });
+    return internalErrorResponse("GET /api/solutions", error, storageNotReady);
   }
 }
 export async function POST(request: Request) {
@@ -44,7 +46,6 @@ export async function POST(request: Request) {
     await db.insert(solutionConfigs).values(solution);
     return Response.json({ solution }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ error: message }, { status: 500 });
+    return internalErrorResponse("POST /api/solutions", error, storageNotReady);
   }
 }

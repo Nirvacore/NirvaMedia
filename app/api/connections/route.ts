@@ -2,17 +2,12 @@ import { and, desc, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { connectorAccounts, connectorEvents, workspaceEntitlements } from "../../../db/schema";
 import { connectorCatalog, connectorIds, productBundles } from "../../../lib/product-catalog";
+import { internalErrorResponse } from "../../../lib/api-errors";
 
 const workspaceId = "nirva-workspace";
 const defaultBundle = productBundles.find((bundle) => bundle.id === "enterprise-global")!;
 
-function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unexpected error";
-  if (message.includes("no such table")) {
-    return "Connector storage is being prepared. Please retry shortly.";
-  }
-  return message;
-}
+const storageNotReady = "Connector storage is being prepared. Please retry shortly.";
 
 export async function GET() {
   try {
@@ -25,7 +20,7 @@ export async function GET() {
 
     return Response.json({ accounts });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("GET /api/connections", error, storageNotReady);
   }
 }
 
@@ -135,6 +130,6 @@ export async function POST(request: Request) {
 
     return Response.json({ account }, { status: existing ? 200 : 201 });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("POST /api/connections", error, storageNotReady);
   }
 }

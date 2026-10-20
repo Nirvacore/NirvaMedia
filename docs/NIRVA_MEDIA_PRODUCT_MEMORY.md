@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-09-15
+updated: 2026-10-19
 status: active-development
 tags:
   - nirva
@@ -89,8 +89,10 @@ The preserved Claude source under both `upstream/` directories stays unchanged.
   Studio modules, language controls, publishing actions, and channel visibility
 - Connection Center with six entitlement-aware connector families, persistent
   account setup records, a publish queue, and connector audit events
-- Campaign Studio scheduling now creates a publish job and truthfully blocks it
-  for authorization until a matching external account is connected
+- Campaign Studio scheduling atomically saves the post schedule, one publish
+  job per post and its audit event, and truthfully blocks the job for
+  authorization until a matching external account is connected; an internal
+  job can be cancelled before any external attempt starts
 - Active NLE adapter with the upstream 21-language registry, 12 writing
   systems, deterministic script detection, `Intl` localization, curated Studio
   draft copy for all 21 languages, and RTL layout for Arabic and Hebrew
@@ -203,6 +205,60 @@ formats, limits, and errors.
    and customer-facing connection onboarding.
 
 ## Recent implementation
+
+- 2026-10-19: Repaired publish-queue integrity on branch
+  `kiro/media-queue-integrity-20261019`. `POST /api/publish-jobs` is the only
+  scheduling path: it requires a saved approved post, that post's channel and
+  a valid `scheduledAt`, then writes the post schedule, publish job and audit
+  event in one D1 batch whose job insert re-checks the post inside the
+  transaction. Migration `0006_publish_job_post_guard.sql` adds a unique
+  `publish_jobs.post_id` index after detaching (not deleting) duplicates from
+  earlier retries, failing pending ones and auditing each; apply it with the
+  application rollout. Same-schedule retries return the existing job
+  (`replayed: true`); other times return 409 until re-timing exists.
+  `PATCH /api/posts/:id` can no longer set `scheduled` or `published` or
+  change a post that has a job. The route now also requires the
+  `smart-publisher` module server-side (403 `MODULE_NOT_ENTITLED`), alongside
+  the unchanged connector, account and canonical checks. Studio sends one
+  request, shows a post as scheduled only after the server confirms, and keeps
+  the same time for retries until a confirmed job or a definitive no-write
+  answer (400/403/404/409 with an error); 5xx and unreadable replies keep it.
+  `GET /api/campaigns` reports each post's internal `publishJob` (or `null`),
+  so Studio labels legacy scheduled posts without a job as not queued and not
+  sent externally, and offers queueing at the stored time (or a return to
+  approved when no time was stored). Not deployed.
+
+- 2026-10-20: Added internal-only cancellation on the same branch.
+  `POST /api/publish-jobs/:id/cancel` with the scheduled post's `postId`
+  cancels a `queued` or `blocked_auth` job that has never started an external
+  attempt (`attempts = 0`). One D1 batch writes a `publish_job.cancelled`
+  audit event, returns the post to `approved` with no time, and marks the job
+  `cancelled` while detaching it from the post so it can be scheduled again;
+  the event insert re-checks job and post inside the transaction. Retries
+  replay. The same Smart Publisher, connector and canonical gates apply. No
+  publishing worker exists yet; `lib/publish-queue.ts` defines the claim a
+  future worker must use (atomically move `queued` to `publishing` and add one
+  attempt only while linked and at the expected count), so a second claim
+  cannot reserve an in-flight job and a claim and cancel cannot both win.
+  No worker, completion or retry/recovery transition exists yet. Studio offers
+  "ยกเลิกงานในคิวภายใน" on scheduled posts with an internal job and shows the
+  post as approved only after the server confirms; Connection Center labels
+  cancelled jobs. No schema migration was needed (`status` is unconstrained
+  text). Remaining queue gaps: re-timing, cancelling after an attempt started,
+  legacy approved posts that still have a job, and who may cancel once
+  workspace roles exist. Not deployed.
+- 2026-10-20: 500 responses from `/api/campaigns`, `/api/publish-jobs`, its
+  cancel route, `PATCH /api/posts/:id`, `/api/connections`,
+  `/api/entitlements` and `/api/solutions` no longer echo exception text.
+  Clients get a generic message, `code` (`INTERNAL_ERROR` or
+  `STORAGE_NOT_READY`) and an `errorId`. The server logs one
+  `api.internal_error` JSON line with allowlisted metadata only: `errorId`,
+  `route`, `code` and SQLite result codes from a fixed whitelist. No error
+  message, cause, SQL or parameters are logged, even redacted
+  (`lib/api-errors.ts`). 4xx and canonical validation answers are unchanged.
+  This work is locally tested and uncommitted, not deployed. Translation and
+  other remaining routes that still return raw 500 text are the next privacy
+  candidates.
 
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.

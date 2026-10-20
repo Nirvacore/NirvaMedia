@@ -152,12 +152,15 @@ does not certify its meaning. The association cannot be edited or removed via
 For any saved canonical post, `PATCH /api/posts/[id]` rejects transitions to
 `approved`, `scheduled` or `published` with HTTP 409 and
 `CANONICAL_HUMAN_REVIEW_REQUIRED`. Draft/review/archive workflow remains
-available. `POST /api/publish-jobs` resolves a supplied `postId` and checks the
+available. `POST /api/publish-jobs` requires a saved `postId` and checks the
 stored association before creating any job or audit event, even if an account
 is connected or the client omits the envelope. Unknown post IDs return 404;
-a channel must match the saved post. An explicitly canonical standalone job is
-also blocked. Generic posts and generic standalone jobs retain the current
-queue behavior.
+a channel must match the saved post. An explicitly canonical payload is also
+blocked. Standalone jobs without a saved post are rejected; generic approved
+posts are scheduled only through this endpoint, which saves the post schedule,
+its single publish job and the audit event together. `POST
+/api/publish-jobs/:id/cancel` also returns 409 `CANONICAL_HUMAN_REVIEW_REQUIRED`
+for a canonical post, because cancelling returns the post to `approved`.
 
 All associated canonical content is conservatively gated, including policy and
 governance. Structural envelope preservation is not semantic equivalence. No

@@ -1,11 +1,13 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { solutionConfigs, workspaceEntitlements } from "../../../db/schema";
+import { internalErrorResponse } from "../../../lib/api-errors";
 import { productBundles } from "../../../lib/product-catalog";
 
 const workspaceId = "nirva-workspace";
 const workspaceName = "Nirva Workspace";
 const defaultBundle = productBundles.find((bundle) => bundle.id === "enterprise-global")!;
+const storageNotReady = "Entitlement storage is being prepared. Please retry shortly.";
 
 function fallbackEntitlement() {
   return {
@@ -27,8 +29,7 @@ export async function GET() {
     const [entitlement] = await db.select().from(workspaceEntitlements).where(eq(workspaceEntitlements.workspaceId, workspaceId)).limit(1);
     return Response.json({ entitlement: entitlement ?? fallbackEntitlement() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ error: message }, { status: 500 });
+    return internalErrorResponse("GET /api/entitlements", error, storageNotReady);
   }
 }
 
@@ -70,7 +71,6 @@ export async function PUT(request: Request) {
 
     return Response.json({ entitlement });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ error: message }, { status: 500 });
+    return internalErrorResponse("PUT /api/entitlements", error, storageNotReady);
   }
 }

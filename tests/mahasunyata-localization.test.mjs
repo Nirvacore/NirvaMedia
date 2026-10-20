@@ -136,17 +136,19 @@ test('publish-jobs resolves stored canonical post even when caller omits associa
   assert.equal((await call(jobs.POST, { channel: 'Facebook', postId: 'unknown' })).status, 404);
 });
 
-test('generic translation, campaign approvals and scheduling retain existing behavior', async () => {
+test('generic translation, campaign approvals and queue scheduling remain available', async () => {
   const result = await call(translations.POST, input({ canonical: undefined, targetLanguage: 'en' }));
   assert.equal(result.status, 200);
   assert.equal(result.body.translation.text, 'A policy draft');
   assert.equal(result.body.translation.canonical, undefined);
   const post = await createCampaign(null);
-  for (const status of ['review', 'approved', 'scheduled']) {
+  for (const status of ['review', 'approved']) {
     assert.equal((await call(posts.PATCH, { status }, context(post.id))).status, 200);
   }
-  assert.equal((await call(jobs.POST, { postId: post.id, channel: 'Facebook' })).status, 201);
-  assert.equal((await call(jobs.POST, { channel: 'Facebook' })).status, 201);
+  const scheduled = await call(jobs.POST, { postId: post.id, channel: 'Facebook', scheduledAt: '2026-10-01T00:00:00Z' });
+  assert.equal(scheduled.status, 201);
+  assert.equal(scheduled.body.post.status, 'scheduled');
+  assert.equal((await call(jobs.POST, { channel: 'Facebook', scheduledAt: '2026-10-01T00:00:00Z' })).status, 400, 'jobs require a saved post');
 });
 
 test('the guard uses all 21 existing locales and keeps every returned canonical field immutable', () => {

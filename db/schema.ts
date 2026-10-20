@@ -2,7 +2,8 @@ import type { CanonicalLocalization } from "../lib/mahasunyata/localization-guar
 import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export type ConnectorAccountStatus = "setup_required" | "connected" | "error";
-export type PublishJobStatus = "queued" | "blocked_auth" | "published" | "failed";
+// `cancelled` jobs never started an external attempt; see lib/publish-queue.ts.
+export type PublishJobStatus = "queued" | "blocked_auth" | "publishing" | "published" | "failed" | "cancelled";
 export type TranslationMemorySource = "provider" | "manual";
 export type TranslationMemoryStatus = "active" | "archived";
 
@@ -109,6 +110,9 @@ export const publishJobs = sqliteTable(
   (table) => [
     index("idx_publish_jobs_workspace_status").on(table.workspaceId, table.status),
     index("idx_publish_jobs_scheduled_at").on(table.scheduledAt),
+    // One publish job per saved post: retries, double submits and concurrent
+    // requests cannot enqueue the same post twice.
+    uniqueIndex("idx_publish_jobs_post_id").on(table.postId),
   ],
 );
 

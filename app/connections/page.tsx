@@ -20,7 +20,7 @@ type ConnectorAccount = {
 type PublishJob = {
   id: string;
   channel: string;
-  status: "queued" | "blocked_auth" | "published" | "failed";
+  status: "queued" | "blocked_auth" | "publishing" | "published" | "failed" | "cancelled";
   scheduledAt: string | number | null;
   attempts: number;
   lastError: string | null;
@@ -63,8 +63,10 @@ function jobLabel(status: PublishJob["status"]) {
   return {
     queued: "รอเผยแพร่",
     blocked_auth: "รอเชื่อมบัญชี",
+    publishing: "กำลังดำเนินการส่ง",
     published: "เผยแพร่แล้ว",
     failed: "ไม่สำเร็จ",
+    cancelled: "ยกเลิกในคิวภายใน",
   }[status];
 }
 
