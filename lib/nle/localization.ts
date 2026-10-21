@@ -18,6 +18,33 @@ type LocalizationOptions = {
   timezone?: string;
 };
 
+type LocalizationInputField = "locale" | "date" | "currency" | "timezone";
+
+/** Caller-supplied localization input that cannot be used. The message is
+ * fixed and never repeats the rejected value, so a caller can answer with a
+ * client error without exposing exception text. */
+export class LocalizationInputError extends Error {
+  readonly field: LocalizationInputField;
+
+  constructor(field: LocalizationInputField) {
+    super(`invalid ${field}`);
+    this.name = "LocalizationInputError";
+    this.field = field;
+  }
+}
+
+/** Builds an Intl formatter whose options may hold a caller-supplied currency
+ * or time zone. Intl rejects a malformed value with a RangeError, which is the
+ * caller's input error; a failure with a built-in default stays internal. */
+function intlFormatter<T>(field: "currency" | "timezone", supplied: boolean, build: () => T): T {
+  try {
+    return build();
+  } catch (error) {
+    if (supplied && error instanceof RangeError) throw new LocalizationInputError(field);
+    throw error;
+  }
+}
+
 const languageDefaults: Record<string, { currency: string; timezone: string }> = {
   th: { currency: "THB", timezone: "Asia/Bangkok" },
   en: { currency: "USD", timezone: "America/New_York" },
@@ -100,7 +127,7 @@ export function localize(
 ) {
   const locale = options.locale ?? "th";
   const language = getNirvaLanguage(locale);
-  if (!language) throw new Error(`Unsupported locale "${locale}"`);
+  if (!language) throw new LocalizationInputError("locale");
 
   const defaults = languageDefaults[locale];
   const result: {
@@ -115,18 +142,22 @@ export function localize(
     result.number = new Intl.NumberFormat(toIntlLocale(locale)).format(data.number);
   }
   if (data.currencyAmount !== undefined) {
-    result.currency = new Intl.NumberFormat(toIntlLocale(locale), {
-      style: "currency",
-      currency: options.currency ?? defaults.currency,
-    }).format(data.currencyAmount);
+    const formatter = intlFormatter("currency", options.currency !== undefined, () =>
+      new Intl.NumberFormat(toIntlLocale(locale), {
+        style: "currency",
+        currency: options.currency ?? defaults.currency,
+      }));
+    result.currency = formatter.format(data.currencyAmount);
   }
   if (data.date !== undefined) {
     const date = new Date(data.date);
-    if (Number.isNaN(date.getTime())) throw new Error("date must be a valid ISO date");
-    result.date = new Intl.DateTimeFormat(toIntlLocale(locale), {
-      dateStyle: "medium",
-      timeZone: options.timezone ?? defaults.timezone,
-    }).format(date);
+    if (Number.isNaN(date.getTime())) throw new LocalizationInputError("date");
+    const formatter = intlFormatter("timezone", options.timezone !== undefined, () =>
+      new Intl.DateTimeFormat(toIntlLocale(locale), {
+        dateStyle: "medium",
+        timeZone: options.timezone ?? defaults.timezone,
+      }));
+    result.date = formatter.format(date);
   }
 
   return result;

@@ -9,11 +9,15 @@ import {
   TRANSLATION_TEXT_LIMIT,
 } from "../../../../lib/nle/translation-memory";
 import { productBundles } from "../../../../lib/product-catalog";
+import { internalErrorResponse } from "../../../../lib/api-errors";
 
 const workspaceId = "nirva-workspace";
 const defaultBundle = productBundles.find((bundle) => bundle.id === "enterprise-global")!;
+const storageNotReady = "Translation Memory storage is being prepared. Please retry shortly.";
 
-export async function rememberTranslation(request: Request) {
+/** Shared by POST /api/translations/remember and PUT /api/translations; each
+ * entry point passes its own route label for the 500 diagnostic. */
+export async function rememberTranslation(request: Request, route: string) {
   try {
     const db = getDb();
     const [entitlement] = await db
@@ -26,7 +30,19 @@ export async function rememberTranslation(request: Request) {
       return Response.json({ error: "Language Engine is not included in the active workspace solution" }, { status: 403 });
     }
 
-    const payload = (await request.json()) as Record<string, unknown>;
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required fields.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
     const sourceText = typeof payload.sourceText === "string" ? normalizeTranslationText(payload.sourceText) : "";
     const translatedText = typeof payload.translatedText === "string" ? normalizeTranslationText(payload.translatedText) : "";
     const sourceLanguage = typeof payload.sourceLanguage === "string" ? payload.sourceLanguage.trim().toLowerCase() : "";
@@ -104,11 +120,10 @@ export async function rememberTranslation(request: Request) {
     );
   } catch (error) {
     if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ error: message }, { status: 500 });
+    return internalErrorResponse(route, error, storageNotReady);
   }
 }
 
 export async function POST(request: Request) {
-  return rememberTranslation(request);
+  return rememberTranslation(request, "POST /api/translations/remember");
 }

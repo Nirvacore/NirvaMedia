@@ -46,9 +46,22 @@ function conflict(code: string, error: string, post: CampaignPost | null, job?: 
   return Response.json({ error, code, post, ...(job === undefined ? {} : { job }) }, { status: 409 });
 }
 
+/** Linked job states that will never publish this schedule. */
+const STOPPED_JOB_STATUSES: readonly string[] = ["failed", "cancelled"];
+
 /** A retry of the same schedule returns the job that already exists. Any other
  * request would re-time or re-route a queued post, which is not available yet. */
 function replayOrConflict(post: CampaignPost, job: PublishJob, channel: string, scheduledAt: Date) {
+  // A stopped job cannot be confirmed as a working schedule. Report it as it
+  // is and change nothing; no retry or replacement transition exists yet.
+  if (STOPPED_JOB_STATUSES.includes(job.status)) {
+    return conflict(
+      "PUBLISH_JOB_STOPPED",
+      `this post's publish job ended as ${job.status} and will not publish; retrying or replacing it is not available yet`,
+      post,
+      job,
+    );
+  }
   const replay =
     post.status === "scheduled" &&
     post.channel === channel &&
@@ -105,7 +118,19 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as Record<string, unknown>;
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
     const channel = typeof payload.channel === "string" ? payload.channel.trim() : "";
     const connectorId = connectorForChannel.get(channel);
     if (!connectorId) {
@@ -186,11 +211,23 @@ export async function POST(request: Request) {
     if (requestedAccountId) {
       accountConditions.push(eq(connectorAccounts.id, requestedAccountId));
     }
-    const [connectedAccount] = await db
+    const eligibleAccounts = await db
       .select()
       .from(connectorAccounts)
       .where(and(...accountConditions))
-      .limit(1);
+      .limit(2);
+    // Without a requested id, several eligible accounts would leave the binding
+    // to row order. Refuse instead of guessing; nothing is written. A requested
+    // id matches at most one account and never falls back to another.
+    if (!requestedAccountId && eligibleAccounts.length > 1) {
+      return conflict(
+        "ACCOUNT_SELECTION_REQUIRED",
+        `more than one connected ${connectorId} account can publish this post; send connectorAccountId to choose one`,
+        post,
+        null,
+      );
+    }
+    const [connectedAccount] = eligibleAccounts;
 
     const now = new Date();
     const job = {

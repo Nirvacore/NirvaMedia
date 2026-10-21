@@ -76,6 +76,28 @@ and `memorySource: "manual"`. Callers should submit reviewed translations,
 but this endpoint does not authenticate a reviewer or establish semantic
 approval. In particular, `manual` never approves canonical content.
 
+## Write-request errors
+
+`POST /api/translations`, `PUT /api/translations`, and
+`POST /api/translations/remember` check the Language Engine entitlement before
+reading the request body. Without it, they return HTTP 403 and leave the body
+unread.
+
+- Malformed or empty JSON returns HTTP 400 with the fixed error
+  `request body must be valid JSON`.
+- Valid JSON that is not an object, including `null`, returns the route's
+  existing HTTP 400 required-fields error. Translation requires `sourceText`,
+  `sourceLanguage`, and `targetLanguage`; remembering also requires
+  `translatedText`.
+- A failed body stream or another unexpected internal failure returns HTTP 500
+  with a generic message, a code and an `errorId`. The response and the
+  allowlisted server diagnostic do not include the request body, exception
+  text, SQL, or bound parameters. Storage that is not migrated yet keeps its
+  `STORAGE_NOT_READY` code and retry message.
+
+Provider HTTP 502/503 responses described above apply to translation after a
+valid request, not to either remember endpoint.
+
 ## List Translation Memory
 
 `GET /api/translations?limit=50&sourceLanguage=th&targetLanguage=en`

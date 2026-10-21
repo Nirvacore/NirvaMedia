@@ -570,3 +570,137 @@ test('the 50 newest queue jobs are chosen deterministically when creation times 
   );
   assert.deepEqual(Object.keys(indexed.jobs[0]), ['id', 'workspaceId', 'postId', 'connectorAccountId', 'channel', 'status', 'scheduledAt', 'attempts', 'lastError', 'createdAt', 'updatedAt'], 'job shape is unchanged');
 });
+
+test('a same-time retry cannot confirm a schedule whose publish job stopped without publishing', async () => {
+  // Synthetic outcomes: no worker runs today, so each job state is set
+  // directly. The post stays scheduled at the same time, so every retry
+  // takes the replay path.
+  const attemptsFor = status => (['publishing', 'published', 'failed'].includes(status) ? 1 : 0);
+  async function scheduledWithJob(jobStatus) {
+    resetQueue();
+    const post = await savedPost();
+    const scheduled = await schedule(post);
+    assert.equal(scheduled.status, 201);
+    runtime.sqlite.prepare('UPDATE publish_jobs SET status = ?, attempts = ? WHERE id = ?').run(jobStatus, attemptsFor(jobStatus), scheduled.body.job.id);
+    return { post, job: scheduled.body.job };
+  }
+  const snapshot = (post, job) => ({
+    post: stored(post.id),
+    job: { ...runtime.sqlite.prepare('SELECT status, post_id, attempts, updated_at FROM publish_jobs WHERE id = ?').get(job.id) },
+    jobs: count('publish_jobs'),
+    events: count('connector_events'),
+  });
+
+  // Jobs that still stand (waiting, in flight or already published) keep the replay.
+  for (const jobStatus of ['queued', 'blocked_auth', 'publishing', 'published']) {
+    const { post, job } = await scheduledWithJob(jobStatus);
+    const before = snapshot(post, job);
+    const retry = await schedule(post, { scheduledAt: whenIso });
+    assert.equal(retry.status, 200, `${jobStatus}: ${JSON.stringify(retry.body)}`);
+    assert.equal(retry.body.replayed, true, jobStatus);
+    assert.equal(retry.body.job.id, job.id);
+    assert.equal(retry.body.job.status, jobStatus);
+    assert.deepEqual(snapshot(post, job), before, `${jobStatus}: a replay writes nothing`);
+  }
+
+  // A job that stopped without publishing is not confirmed as scheduled.
+  for (const jobStatus of ['failed', 'cancelled']) {
+    const { post, job } = await scheduledWithJob(jobStatus);
+    const before = snapshot(post, job);
+    const retry = await schedule(post, { scheduledAt: whenIso });
+    assert.equal(retry.status, 409, `${jobStatus}: ${JSON.stringify(retry.body)}`);
+    assert.equal(retry.body.replayed, undefined, jobStatus);
+    assert.equal(retry.body.code, 'PUBLISH_JOB_STOPPED');
+    assert.equal(typeof retry.body.error, 'string', 'Studio treats this as a definitive no-write answer');
+    assert.equal(retry.body.job.id, job.id);
+    assert.equal(retry.body.job.status, jobStatus, 'the client sees that this job will not publish');
+    assert.equal(retry.body.post.status, 'scheduled');
+    assert.deepEqual(snapshot(post, job), before, `${jobStatus}: nothing is written or recovered`);
+  }
+
+  // Entitlement and canonical guards still answer first for a stopped job.
+  const { post } = await scheduledWithJob('failed');
+  entitle([], ['meta-network']);
+  assert.equal((await schedule(post, { scheduledAt: whenIso })).body.code, 'MODULE_NOT_ENTITLED');
+  entitle(['smart-publisher'], ['line-ecosystem']);
+  assert.equal((await schedule(post, { scheduledAt: whenIso })).status, 403);
+  runtime.sqlite.exec('DELETE FROM workspace_entitlements');
+  runtime.sqlite.prepare('UPDATE campaign_posts SET canonical = ? WHERE id = ?')
+    .run(JSON.stringify({ concept_id: 'synthetic-concept', source_concept_version: '0.1.0' }), post.id);
+  assert.equal((await schedule(post, { scheduledAt: whenIso })).body.code, 'CANONICAL_HUMAN_REVIEW_REQUIRED');
+});
+
+test('with several connected accounts a schedule must name one, and no account is chosen arbitrarily', async () => {
+  // Synthetic account rows only: nothing is connected to a real platform.
+  const addAccount = (id, connectorId = 'meta-network', status = 'connected', workspaceId = 'nirva-workspace') => runtime.sqlite
+    .prepare("INSERT INTO connector_accounts (id, workspace_id, connector_id, account_name, status, scopes, created_at, updated_at) VALUES (?, ?, ?, ?, ?, '[]', 1, 1)")
+    .run(id, workspaceId, connectorId, `Synthetic ${id}`, status);
+  const queueSnapshot = post => ({ post: stored(post.id), jobs: count('publish_jobs'), events: count('connector_events') });
+
+  // Accounts that can never publish a Facebook post for this workspace.
+  addAccount('meta-setup', 'meta-network', 'setup_required');
+  addAccount('line-connected', 'line-ecosystem');
+  addAccount('other-workspace-meta', 'meta-network', 'connected', 'other-workspace');
+
+  // No eligible account: the job waits for authorization, as before.
+  const unconnected = await schedule(await savedPost());
+  assert.equal(unconnected.status, 201);
+  assert.deepEqual([unconnected.body.job.status, unconnected.body.job.connectorAccountId], ['blocked_auth', null]);
+
+  // A single eligible account is still selected automatically.
+  addAccount('meta-a');
+  const single = await savedPost();
+  const auto = await schedule(single);
+  assert.equal(auto.status, 201);
+  assert.deepEqual([auto.body.job.status, auto.body.job.connectorAccountId], ['queued', 'meta-a']);
+
+  // Several eligible accounts and no choice: refuse and write nothing.
+  addAccount('meta-b');
+  const ambiguous = await savedPost();
+  const before = queueSnapshot(ambiguous);
+  const refused = await schedule(ambiguous);
+  assert.equal(refused.status, 409, JSON.stringify(refused.body));
+  assert.equal(refused.body.code, 'ACCOUNT_SELECTION_REQUIRED');
+  assert.equal(typeof refused.body.error, 'string', 'Studio treats this as a definitive no-write answer');
+  assert.equal(refused.body.post.status, 'approved');
+  assert.equal(refused.body.job, null, 'the queue was read and holds no job for this post');
+  assert.deepEqual(queueSnapshot(ambiguous), before, 'no post, job or event write');
+
+  // An explicit id binds exactly that account; an id that cannot publish never falls back.
+  const chosen = await schedule(ambiguous, { connectorAccountId: 'meta-b' });
+  assert.equal(chosen.status, 201);
+  assert.deepEqual([chosen.body.job.status, chosen.body.job.connectorAccountId], ['queued', 'meta-b']);
+  for (const connectorAccountId of ['meta-setup', 'line-connected', 'other-workspace-meta', 'missing-account']) {
+    const result = await schedule(await savedPost(), { connectorAccountId });
+    assert.equal(result.status, 201, connectorAccountId);
+    assert.deepEqual([result.body.job.status, result.body.job.connectorAccountId], ['blocked_auth', null], `${connectorAccountId}: no fallback`);
+  }
+
+  // A legacy scheduled post without a job is repaired only with an explicit account.
+  const legacy = await savedPost();
+  scheduleDirectly(legacy.id);
+  const legacyBefore = queueSnapshot(legacy);
+  assert.equal((await schedule(legacy, { scheduledAt: whenIso })).body.code, 'ACCOUNT_SELECTION_REQUIRED');
+  assert.deepEqual(queueSnapshot(legacy), legacyBefore);
+  const repaired = await schedule(legacy, { scheduledAt: whenIso, connectorAccountId: 'meta-a' });
+  assert.equal(repaired.status, 201);
+  assert.equal(repaired.body.job.connectorAccountId, 'meta-a');
+
+  // Existing jobs still replay or conflict before any account choice.
+  const replay = await schedule(single, { scheduledAt: whenIso });
+  assert.equal(replay.status, 200);
+  assert.equal(replay.body.replayed, true);
+  assert.equal(replay.body.job.connectorAccountId, 'meta-a');
+  assert.equal((await schedule(single, { scheduledAt: '2026-10-21T02:30:00.000Z' })).body.code, 'PUBLISH_JOB_EXISTS');
+  runtime.sqlite.prepare("UPDATE publish_jobs SET status = 'failed', attempts = 1 WHERE id = ?").run(auto.body.job.id);
+  assert.equal((await schedule(single, { scheduledAt: whenIso })).body.code, 'PUBLISH_JOB_STOPPED');
+
+  // Entitlement and canonical checks still answer first.
+  const guarded = await savedPost();
+  entitle([], ['meta-network']);
+  assert.equal((await schedule(guarded)).body.code, 'MODULE_NOT_ENTITLED');
+  runtime.sqlite.exec('DELETE FROM workspace_entitlements');
+  runtime.sqlite.prepare('UPDATE campaign_posts SET canonical = ? WHERE id = ?')
+    .run(JSON.stringify({ concept_id: 'synthetic-concept', source_concept_version: '0.1.0' }), guarded.id);
+  assert.equal((await schedule(guarded)).body.code, 'CANONICAL_HUMAN_REVIEW_REQUIRED');
+});

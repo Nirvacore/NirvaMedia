@@ -84,7 +84,17 @@ const notCancellable =
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id: jobId } = await context.params;
-    const payload = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    // Keep body-read failures in the outer 500 handler. Only malformed JSON
+    // supplied by the client gets a fixed 400 without echoing parser text.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
     const postId = typeof payload.postId === "string" ? payload.postId.trim() : "";
     if (!postId) return Response.json({ error: "postId of the scheduled post is required" }, { status: 400 });
 

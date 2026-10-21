@@ -13,6 +13,7 @@ import {
   translateWithProvider,
 } from "../../../lib/nle/translation-provider";
 import { productBundles } from "../../../lib/product-catalog";
+import { internalErrorResponse } from "../../../lib/api-errors";
 import { rememberTranslation } from "./remember/route";
 
 const workspaceId = "nirva-workspace";
@@ -29,13 +30,7 @@ async function hasLanguageEngine() {
   return moduleIds.includes("language-engine");
 }
 
-function storageError(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unexpected error";
-  if (message.includes("no such table")) {
-    return "Translation Memory storage is being prepared. Please retry shortly.";
-  }
-  return message;
-}
+const storageNotReady = "Translation Memory storage is being prepared. Please retry shortly.";
 
 export async function GET(request: Request) {
   try {
@@ -71,7 +66,7 @@ export async function GET(request: Request) {
     return Response.json({ memories: validatedMemories, provider: getTranslationProviderStatus() });
   } catch (error) {
     if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
-    return Response.json({ error: storageError(error) }, { status: 500 });
+    return internalErrorResponse("GET /api/translations", error, storageNotReady);
   }
 }
 
@@ -81,7 +76,19 @@ export async function POST(request: Request) {
       return Response.json({ error: "Language Engine is not included in the active workspace solution" }, { status: 403 });
     }
 
-    const payload = (await request.json()) as Record<string, unknown>;
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required fields.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
     const sourceText = typeof payload.sourceText === "string"
       ? normalizeTranslationText(payload.sourceText)
       : "";
@@ -221,10 +228,10 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
-    return Response.json({ error: storageError(error) }, { status: 500 });
+    return internalErrorResponse("POST /api/translations", error, storageNotReady);
   }
 }
 
 export async function PUT(request: Request) {
-  return rememberTranslation(request);
+  return rememberTranslation(request, "PUT /api/translations");
 }

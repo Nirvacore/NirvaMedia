@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-10-19
+updated: 2026-10-21
 status: active-development
 tags:
   - nirva
@@ -256,9 +256,35 @@ formats, limits, and errors.
   `route`, `code` and SQLite result codes from a fixed whitelist. No error
   message, cause, SQL or parameters are logged, even redacted
   (`lib/api-errors.ts`). 4xx and canonical validation answers are unchanged.
-  This work is locally tested and uncommitted, not deployed. Translation and
-  other remaining routes that still return raw 500 text are the next privacy
-  candidates.
+  Committed as `3a4d508` on `kiro/media-queue-integrity-20261019` (pushed to
+  the branch, not merged or deployed).
+- 2026-10-20: The same redaction now covers the Translation Memory routes:
+  `GET`/`POST /api/translations`, `PUT /api/translations` and
+  `POST /api/translations/remember`. A failed memory write had returned SQL
+  whose bound parameters include the user's source and translated text, and
+  an unreadable request body had returned the JSON parser's message. 4xx,
+  413, canonical 400s and the provider 502/503 answers are unchanged.
+  `POST /api/languages` now answers rejected localize input with a fixed 400
+  and unexpected failures with the shared generic 500. Not merged or
+  deployed.
+- 2026-10-21: Finished request-body handling on `POST /api/languages`, the
+  three Translation Memory write routes, `POST /api/publish-jobs`, its
+  cancel route and `POST /api/campaigns`. Each reads the body as text before
+  parsing it. Malformed or empty JSON gets the fixed 400
+  `request body must be valid JSON`; JSON that is not an object, `null`
+  included, gets the route's existing required-input 400. A failure while
+  reading the body is internal even when it is reported as a `SyntaxError`:
+  the shared generic 500 and one allowlisted log line. `POST /api/campaigns`
+  also answers a wrong-typed `brief`, `language`, `tone` or `channels` with
+  a fixed 400 that never echoes the value. A `channels` value must be a list
+  of strings (a string is no longer read character by character), and names
+  inherited from `Object.prototype`, such as `toString`, are treated as
+  unknown channels. A missing or `null` field keeps its required or default
+  meaning. Rejected requests write nothing; other successful and validation
+  answers are unchanged. `PATCH /api/posts/:id`, `POST /api/connections`,
+  `PUT /api/entitlements` and `POST /api/solutions` still answer malformed
+  JSON with the generic 500 and are the next candidates. Not merged or
+  deployed.
 
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.

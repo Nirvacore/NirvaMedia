@@ -493,3 +493,35 @@ test('a replayed cancel for a post that moved on does not claim it returned to a
   assert.equal(alertText(app), 'ยกเลิกงานในคิวภายในแล้ว · งานนี้ไม่เคยถูกส่งออกภายนอก');
   assert.equal(app.button('scheduled'), undefined);
 });
+
+test('a scheduled post whose queue job stopped is not shown as scheduled, from history or a refused retry', async () => {
+  for (const jobStatus of ['failed', 'cancelled']) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-20T02:30:00.000Z', publishJob: { id: 'job-1', status: jobStatus } });
+    assert.equal(app.button('scheduled'), undefined, `${jobStatus}: the stopped job is not presented as a coming publish`);
+    assert.deepEqual(notes(app), [`งานในคิวภายในหยุดแล้ว (${jobStatus}) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่`]);
+    assert.equal(cancelButton(app), undefined);
+    assert.equal(repairButton(app), undefined, 'no recovery is offered until one is defined');
+    assert.equal(scheduleButton(app), undefined);
+  }
+  for (const jobStatus of ['queued', 'blocked_auth', 'publishing', 'published']) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-20T02:30:00.000Z', publishJob: { id: 'job-1', status: jobStatus } });
+    assert.equal(app.button('scheduled').props.disabled, true, `${jobStatus}: a standing job keeps the scheduled label`);
+    assert.deepEqual(notes(app), [], jobStatus);
+  }
+
+  // The server refuses a same-time retry of a stopped job with a definitive 409.
+  const { app, post } = await approvedStudio();
+  const pending = scheduleButton(app).props.onClick();
+  const scheduledAt = app.requests[1].payload.scheduledAt;
+  app.answer(1, {
+    error: "this post's publish job ended as failed and will not publish; retrying or replacing it is not available yet",
+    code: 'PUBLISH_JOB_STOPPED',
+    post: { ...post, status: 'scheduled', scheduledAt },
+    job: { id: 'job-1', status: 'failed', postId: post.id, attempts: 1 },
+  }, false, 409);
+  await pending; app.render();
+  assert.equal(app.button('scheduled'), undefined);
+  assert.deepEqual(notes(app), ['งานในคิวภายในหยุดแล้ว (failed) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่']);
+  assert.match(alertText(app), /^ตั้งเวลาโพสต์ไม่สำเร็จ · /);
+  assert.equal(scheduleButton(app), undefined, 'the refused retry does not offer another schedule');
+});

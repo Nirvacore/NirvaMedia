@@ -118,6 +118,14 @@ function isUnqueuedSchedule(post: StudioPost) {
 // server also refuses jobs that already started an external attempt.
 const cancellableJobStatuses = ["queued", "blocked_auth"];
 
+// Mirrors STOPPED_JOB_STATUSES in app/api/publish-jobs/route.ts: a linked job
+// in one of these states will not publish, and no retry flow exists yet.
+const stoppedJobStatuses = ["failed", "cancelled"];
+
+function hasStoppedJob(post: StudioPost) {
+  return post.status === "scheduled" && !!post.publishJob && stoppedJobStatuses.includes(post.publishJob.status);
+}
+
 export default function StudioPage() {
   const [channels, setChannels] = useState(["Instagram", "Facebook", "LINE OA"]);
   const [language, setLanguage] = useState("th");
@@ -535,7 +543,8 @@ export default function StudioPage() {
                         {isUnqueuedSchedule(post) && <p role="note">{post.scheduledAt ? "ตั้งเวลาไว้แล้ว แต่ยังไม่มีงานในคิวภายใน" : "สถานะตั้งเวลา แต่ไม่มีเวลาที่บันทึกไว้และไม่มีงานในคิวภายใน"} · ยังไม่ได้ส่งโพสต์ออกภายนอก</p>}
                         {isUnqueuedSchedule(post) && !!post.scheduledAt && <button disabled={!canPublish || !!post.canonical || schedulingPostIds.includes(post.id)} onClick={() => schedulePost(post)}>{schedulingPostIds.includes(post.id) ? "กำลังเพิ่มเข้าคิว..." : canPublish ? "เพิ่มเข้าคิวภายในตามเวลาเดิม" : "ต้องมี Publisher"}</button>}
                         {isUnqueuedSchedule(post) && !post.scheduledAt && <button disabled={!!post.canonical} onClick={() => transitionPost(post, "approved")}>กลับเป็นอนุมัติเพื่อตั้งเวลาใหม่</button>}
-                        {post.status === "scheduled" && !isUnqueuedSchedule(post) && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
+                        {hasStoppedJob(post) && <p role="note">งานในคิวภายในหยุดแล้ว ({post.publishJob?.status}) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่</p>}
+                        {post.status === "scheduled" && !isUnqueuedSchedule(post) && !hasStoppedJob(post) && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
                         {post.status === "scheduled" && post.publishJob && cancellableJobStatuses.includes(post.publishJob.status) && <button disabled={!canPublish || !!post.canonical || cancellingPostIds.includes(post.id)} onClick={() => cancelQueuedPost(post)}>{cancellingPostIds.includes(post.id) ? "กำลังยกเลิกงานในคิว..." : canPublish ? "ยกเลิกงานในคิวภายใน" : "ต้องมี Publisher"}</button>}
                       </div>
                     </div>

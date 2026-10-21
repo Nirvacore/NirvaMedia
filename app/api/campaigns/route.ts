@@ -165,22 +165,39 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as {
-      canonical?: unknown;
-      brief?: string;
-      language?: string;
-      tone?: string;
-      channels?: string[];
-    };
-    const brief = payload.brief?.trim() ?? "";
-    const language = payload.language?.trim() ?? "th";
-    const tone = payload.tone?.trim() ?? "อบอุ่นและมั่นใจ";
-    const channels = Array.from(new Set(payload.channels ?? [])).filter((channel) => channel in channelTemplates);
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
+    // A missing or null field keeps its meaning (required, or the default). A
+    // value of another type gets that field's fixed 400 below, so it is never
+    // echoed or saved; a string is not a channel list even though it iterates.
+    const brief = typeof payload.brief === "string" ? payload.brief.trim() : "";
+    const requestedLanguage = payload.language ?? "th";
+    const language = typeof requestedLanguage === "string" ? requestedLanguage.trim() : "";
+    const requestedTone = payload.tone ?? "อบอุ่นและมั่นใจ";
+    const tone = typeof requestedTone === "string" ? requestedTone.trim() : null;
+    const requestedChannels = payload.channels ?? [];
+    // Only the templates' own names are channels: an inherited name such as
+    // "toString" is unsupported like any other unknown name.
+    const channels = Array.isArray(requestedChannels) && requestedChannels.every((channel): channel is string => typeof channel === "string")
+      ? Array.from(new Set(requestedChannels)).filter((channel) => Object.hasOwn(channelTemplates, channel))
+      : [];
 
     if (!brief) return Response.json({ error: "brief is required" }, { status: 400 });
     if (!isSupportedNirvaLanguage(language)) {
       return Response.json({ error: "language is not supported by the 21-language NLE registry" }, { status: 400 });
     }
+    if (tone === null) return Response.json({ error: "tone must be a string" }, { status: 400 });
     if (!channels.length) return Response.json({ error: "at least one supported channel is required" }, { status: 400 });
 
     const canonical = guardLocalization(payload.canonical, language);
