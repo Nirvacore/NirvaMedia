@@ -1,5 +1,5 @@
 import { canonicalPublicationBlock } from "../../../lib/mahasunyata/localization-guard";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { getDb } from "../../../db";
 import {
   campaignPosts,
@@ -12,6 +12,7 @@ import {
   connectorChannels,
   productBundles,
 } from "../../../lib/product-catalog";
+import { internalErrorResponse } from "../../../lib/api-errors";
 
 const workspaceId = "nirva-workspace";
 const defaultBundle = productBundles.find((bundle) => bundle.id === "enterprise-global")!;
@@ -22,19 +23,74 @@ const connectorForChannel = new Map(
   ),
 );
 
-function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unexpected error";
-  if (message.includes("no such table")) {
-    return "Publishing storage is being prepared. Please retry shortly.";
-  }
-  return message;
-}
+type Database = ReturnType<typeof getDb>;
+type CampaignPost = typeof campaignPosts.$inferSelect;
+type PublishJob = typeof publishJobs.$inferSelect;
+
+const storageNotReady = "Publishing storage is being prepared. Please retry shortly.";
 
 function parseScheduledAt(value: unknown) {
   if (value === undefined || value === null || value === "") return null;
   if (typeof value !== "string" && typeof value !== "number") return undefined;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+function sameInstant(stored: string | null, expected: Date) {
+  return stored !== null && Date.parse(stored) === expected.getTime();
+}
+
+/** `job` is present (possibly null) only when this request read the queue, so
+ * clients can tell "no job" from "not checked". */
+function conflict(code: string, error: string, post: CampaignPost | null, job?: PublishJob | null) {
+  return Response.json({ error, code, post, ...(job === undefined ? {} : { job }) }, { status: 409 });
+}
+
+/** Linked job states that will never publish this schedule. */
+const STOPPED_JOB_STATUSES: readonly string[] = ["failed", "cancelled"];
+
+/** A retry of the same schedule returns the job that already exists. Any other
+ * request would re-time or re-route a queued post, which is not available yet. */
+function replayOrConflict(post: CampaignPost, job: PublishJob, channel: string, scheduledAt: Date) {
+  // A stopped job cannot be confirmed as a working schedule. Report it as it
+  // is and change nothing; no retry or replacement transition exists yet.
+  if (STOPPED_JOB_STATUSES.includes(job.status)) {
+    return conflict(
+      "PUBLISH_JOB_STOPPED",
+      `this post's publish job ended as ${job.status} and will not publish; retrying or replacing it is not available yet`,
+      post,
+      job,
+    );
+  }
+  const replay =
+    post.status === "scheduled" &&
+    post.channel === channel &&
+    job.channel === channel &&
+    job.scheduledAt?.getTime() === scheduledAt.getTime() &&
+    sameInstant(post.scheduledAt, scheduledAt);
+  if (replay) return Response.json({ job, post, replayed: true });
+  return conflict(
+    "PUBLISH_JOB_EXISTS",
+    "post already has a publish job for a different channel or schedule; re-timing queued posts is not available yet",
+    post,
+    job,
+  );
+}
+
+async function currentState(db: Database, postId: string) {
+  // One statement reads the post and the job linked to it, so a cancel or
+  // schedule committing meanwhile cannot pair two moments.
+  const [row] = await db
+    .select({ post: campaignPosts, job: publishJobs })
+    .from(campaignPosts)
+    .leftJoin(publishJobs, eq(publishJobs.postId, campaignPosts.id))
+    .where(eq(campaignPosts.id, postId))
+    .limit(1);
+  if (row) return { post: row.post, job: row.job ?? null };
+  // Without a post there is no pair to keep consistent; report any job still
+  // pointing at the id, as before.
+  const [job] = await db.select().from(publishJobs).where(eq(publishJobs.postId, postId)).limit(1);
+  return { post: null, job: job ?? null };
 }
 
 export async function GET() {
@@ -44,18 +100,37 @@ export async function GET() {
       .select()
       .from(publishJobs)
       .where(eq(publishJobs.workspaceId, workspaceId))
-      .orderBy(desc(publishJobs.createdAt))
+      // Newest first; the unique id breaks creation-time ties so the same 50
+      // jobs are listed whichever plan SQLite uses.
+      .orderBy(desc(publishJobs.createdAt), asc(publishJobs.id))
       .limit(50);
 
     return Response.json({ jobs });
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("GET /api/publish-jobs", error, storageNotReady);
   }
 }
 
+/**
+ * Schedules a saved, approved post. The post status and schedule, the publish
+ * job and its audit event are written in one D1 batch, so none of them can
+ * exist without the others.
+ */
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as Record<string, unknown>;
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
     const channel = typeof payload.channel === "string" ? payload.channel.trim() : "";
     const connectorId = connectorForChannel.get(channel);
     if (!connectorId) {
@@ -73,6 +148,13 @@ export async function POST(request: Request) {
       .from(workspaceEntitlements)
       .where(eq(workspaceEntitlements.workspaceId, workspaceId))
       .limit(1);
+    const entitledModuleIds = entitlement?.moduleIds ?? [...defaultBundle.moduleIds];
+    if (!entitledModuleIds.includes("smart-publisher")) {
+      return Response.json(
+        { error: "Smart Publisher is not included in the active workspace solution", code: "MODULE_NOT_ENTITLED" },
+        { status: 403 },
+      );
+    }
     const entitledConnectorIds = entitlement?.connectorIds ?? [...defaultBundle.connectorIds];
     if (!entitledConnectorIds.includes(connectorId)) {
       return Response.json(
@@ -81,18 +163,46 @@ export async function POST(request: Request) {
       );
     }
 
+    const payloadBlock = canonicalPublicationBlock(payload.canonical);
+    if (payloadBlock) return payloadBlock;
+
+    // The saved post, not the caller, is the source of truth for channel,
+    // approval and schedule.
+    const postId = typeof payload.postId === "string" ? payload.postId.trim() : "";
+    if (!postId) {
+      return Response.json({ error: "postId of a saved, approved post is required" }, { status: 400 });
+    }
+    const [post] = await db.select().from(campaignPosts).where(eq(campaignPosts.id, postId)).limit(1);
+    if (!post) return Response.json({ error: "post not found" }, { status: 404 });
+    const blocked = canonicalPublicationBlock(post.canonical);
+    if (blocked) return blocked;
+    if (post.channel !== channel) return Response.json({ error: "channel must match the saved post" }, { status: 400 });
+    if (post.status !== "approved" && post.status !== "scheduled") {
+      return conflict("POST_NOT_APPROVED", `post must be approved before scheduling (current status: ${post.status})`, post);
+    }
+    if (!scheduledAt) {
+      return Response.json({ error: "scheduledAt is required to schedule a post" }, { status: 400 });
+    }
+
+    const [existingJob] = await db.select().from(publishJobs).where(eq(publishJobs.postId, post.id)).limit(1);
+    if (existingJob) return replayOrConflict(post, existingJob, channel, scheduledAt);
+
+    // The earlier two-request flow could schedule a post without queueing it.
+    // Retrying that exact schedule repairs the missing job; any other time
+    // would be a re-time.
+    const storedSchedule = post.status === "scheduled" ? post.scheduledAt : null;
+    if (post.status === "scheduled" && !sameInstant(storedSchedule, scheduledAt)) {
+      return conflict(
+        "SCHEDULE_MISMATCH",
+        "post is already scheduled for a different time; re-timing is not available yet",
+        post,
+        null,
+      );
+    }
+    const scheduledIso = storedSchedule ?? scheduledAt.toISOString();
+
     const requestedAccountId =
       typeof payload.connectorAccountId === "string" ? payload.connectorAccountId.trim() : "";
-    const postId = typeof payload.postId === "string" ? payload.postId.trim() || null : null;
-    if (postId) {
-      const [post] = await db.select().from(campaignPosts).where(eq(campaignPosts.id, postId)).limit(1);
-      if (!post) return Response.json({ error: "post not found" }, { status: 404 });
-      const blocked = canonicalPublicationBlock(post.canonical);
-      if (blocked) return blocked;
-      if (post.channel !== channel) return Response.json({ error: "channel must match the saved post" }, { status: 400 });
-    }
-    const blocked = canonicalPublicationBlock(payload.canonical);
-    if (blocked) return blocked;
     const accountConditions = [
       eq(connectorAccounts.workspaceId, workspaceId),
       eq(connectorAccounts.connectorId, connectorId),
@@ -101,17 +211,29 @@ export async function POST(request: Request) {
     if (requestedAccountId) {
       accountConditions.push(eq(connectorAccounts.id, requestedAccountId));
     }
-    const [connectedAccount] = await db
+    const eligibleAccounts = await db
       .select()
       .from(connectorAccounts)
       .where(and(...accountConditions))
-      .limit(1);
+      .limit(2);
+    // Without a requested id, several eligible accounts would leave the binding
+    // to row order. Refuse instead of guessing; nothing is written. A requested
+    // id matches at most one account and never falls back to another.
+    if (!requestedAccountId && eligibleAccounts.length > 1) {
+      return conflict(
+        "ACCOUNT_SELECTION_REQUIRED",
+        `more than one connected ${connectorId} account can publish this post; send connectorAccountId to choose one`,
+        post,
+        null,
+      );
+    }
+    const [connectedAccount] = eligibleAccounts;
 
     const now = new Date();
     const job = {
       id: crypto.randomUUID(),
       workspaceId,
-      postId,
+      postId: post.id,
       connectorAccountId: connectedAccount?.id ?? null,
       channel,
       status: connectedAccount ? ("queued" as const) : ("blocked_auth" as const),
@@ -128,21 +250,57 @@ export async function POST(request: Request) {
       eventType: connectedAccount ? "publish_job.queued" : "publish_job.blocked_auth",
       payload: {
         publishJobId: job.id,
-        postId: job.postId,
+        postId: post.id,
         channel,
         connectorId,
-        scheduledAt: scheduledAt?.toISOString() ?? null,
+        scheduledAt: scheduledAt.toISOString(),
+        postStatusFrom: post.status,
+        postStatusTo: "scheduled",
       },
       createdAt: now,
     };
 
-    await db.batch([
-      db.insert(publishJobs).values(job),
-      db.insert(connectorEvents).values(event),
-    ]);
+    // The job copies its channel from the post row inside the transaction. If
+    // the post is no longer scheduled for this channel and time, the value is
+    // NULL, the NOT NULL constraint aborts the batch and nothing is written.
+    // The unique post index rejects a second job for the same post.
+    const insertJob = db.insert(publishJobs).values({
+      ...job,
+      channel: sql`(SELECT ${campaignPosts.channel} FROM ${campaignPosts} WHERE ${campaignPosts.id} = ${post.id} AND ${campaignPosts.status} = 'scheduled' AND ${campaignPosts.channel} = ${channel} AND ${campaignPosts.scheduledAt} = ${scheduledIso})`,
+    });
+    const insertEvent = db.insert(connectorEvents).values(event);
+    try {
+      if (post.status === "approved") {
+        await db.batch([
+          db
+            .update(campaignPosts)
+            .set({ status: "scheduled", scheduledAt: scheduledIso })
+            .where(and(eq(campaignPosts.id, post.id), eq(campaignPosts.status, "approved"))),
+          insertJob,
+          insertEvent,
+        ]);
+      } else {
+        await db.batch([insertJob, insertEvent]);
+      }
+    } catch (error) {
+      // The batch rolled back as a unit; report whichever state won.
+      const current = await currentState(db, post.id);
+      if (current.post && current.job) return replayOrConflict(current.post, current.job, channel, scheduledAt);
+      if (
+        current.post?.status !== post.status ||
+        current.post?.channel !== post.channel ||
+        current.post?.scheduledAt !== post.scheduledAt
+      ) {
+        return conflict("POST_STATE_CHANGED", "post changed while scheduling; reload and try again", current.post, current.job);
+      }
+      throw error;
+    }
 
-    return Response.json({ job }, { status: 201 });
+    return Response.json(
+      { job, post: { ...post, status: "scheduled", scheduledAt: scheduledIso } },
+      { status: 201 },
+    );
   } catch (error) {
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("POST /api/publish-jobs", error, storageNotReady);
   }
 }

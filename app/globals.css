@@ -108,3 +108,117 @@ footer{width:min(1160px,calc(100% - 48px));margin:auto;padding:35px 0;display:fl
 .continuity-artifacts>.artifact-gallery{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0;align-items:stretch}.artifact-gallery figure{display:flex;flex-direction:column}.artifact-gallery figure.artifact-wide{grid-column:span 2}.artifact-gallery img{aspect-ratio:1/1;height:100%;object-fit:contain;background:#02070d}.artifact-gallery .artifact-wide img{aspect-ratio:16/9;object-fit:cover}.artifact-gallery figcaption{display:grid;grid-template-columns:1fr auto;gap:5px;margin-top:auto}.artifact-gallery figcaption strong{grid-column:1/-1;color:#69e3c4;font-size:7px}.artifact-gallery figcaption code{color:#536e69;font-size:6px}
 @media(max-width:900px){.continuity-artifacts>.artifact-gallery{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:620px){.continuity-artifacts>.artifact-gallery{grid-template-columns:1fr}.artifact-gallery figure.artifact-wide{grid-column:auto}}
+
+/* Campaign Studio: readable operational state and reachable controls. */
+.studio-app { font-size: 14px; line-height: 1.5; }
+.studio-app :is(p, small, label, button, select, textarea, a:not(.brand)) {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.studio-app :is(
+  .studio-breadcrumb, .step-pill, .field-label, .autosave, .result-count,
+  .avatar, .language-readiness-heading > div > span,
+  .workspace-card strong, .brief-insight strong, .brief-insight b,
+  .empty-output > div:last-child span,
+  .recent-campaign-heading strong, .recent-campaign-heading span,
+  .recent-campaign-list button span, .entitlement-strip,
+  .entitlement-strip > span, .language-readiness-heading strong,
+  .language-readiness-heading > b, .language-capability-row span,
+  .language-list > span, .language-list > span small,
+  .translation-truth, .translation-output,
+  .translation-source-state span, .translation-actions > div span,
+  .post-meta strong, .post-meta span, .post-meta b,
+  .post-footer > span, .studio-status
+) { font-size: 14px; line-height: 1.5; }
+.studio-app :is(
+  .studio-header p, .autosave, .result-count, .brief-insight p,
+  .recent-campaign-heading span, .recent-campaign-list button small,
+  .post-content p, .post-footer > span, .studio-status,
+  .language-readiness > p, .translation-heading p,
+  .translation-source-state small, .translation-disclaimer
+) { color: #465d57; }
+.studio-app :is(.post-content h3, .manual-memory-intro h3) {
+  font-size: 18px;
+  line-height: 1.35;
+}
+.studio-app .post-content { min-width: 0; overflow-wrap: anywhere; }
+.studio-app .recent-campaign-list button span {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+.studio-app .post-meta { flex-wrap: wrap; gap: 6px 10px; }
+.studio-app .post-meta b {
+  border: 1px solid #b9cbd0;
+  background: #eaf0f2;
+  color: #294852;
+  text-transform: none;
+}
+.studio-app .post-footer { flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
+.studio-app .post-footer p[role="note"] {
+  flex: 1 0 100%;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #e8d197;
+  border-radius: 9px;
+  background: #fff7e5;
+  color: #684b10;
+  overflow-wrap: anywhere;
+}
+.studio-app .post-footer button.scheduled {
+  border-color: #b9d0dc;
+  background: #eaf2f6;
+  color: #28546a;
+}
+.studio-app button { min-width: 44px; min-height: 44px; cursor: pointer; }
+.studio-app select { min-height: 44px; }
+.studio-app :is(.studio-sidebar nav a, .back-site, .entitlement-strip a, .studio-status a) {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+}
+.studio-app :is(a, button, textarea, select):focus-visible {
+  outline: 3px solid #087d68;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px #fff;
+}
+.studio-app .studio-status { flex-wrap: wrap; align-items: center; }
+
+@media (min-width: 1041px) {
+  .studio-app .studio-sidebar nav a { font-size: 14px; }
+}
+@media (max-width: 1160px) {
+  .studio-app .studio-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .studio-app .studio-sidebar { height: auto; flex-wrap: wrap; gap: 8px; }
+  .studio-app .studio-brand > span:last-child { font-size: 18px; }
+  .studio-app .studio-sidebar nav {
+    width: 100%;
+    margin-left: 0;
+    overflow-x: auto;
+    padding: 4px;
+    gap: 6px;
+  }
+  .studio-app .studio-sidebar nav a,
+  .studio-app .studio-sidebar nav a.active {
+    display: inline-flex;
+    flex: 0 0 auto;
+    font-size: 14px;
+    padding: 8px 10px;
+  }
+  .studio-app .studio-header { gap: 12px; }
+  .studio-app .studio-layout { padding: 12px; }
+  .studio-app :is(.brief-panel, .output-panel) { padding: 16px; }
+  .studio-app .post-card { grid-template-columns: minmax(0, 1fr); }
+  .studio-app .post-art { min-height: 96px; }
+  .studio-app .post-content { padding: 0; }
+  .studio-app .post-meta b { margin-left: 0; }
+  .studio-app .post-footer { flex-direction: column; align-items: stretch; }
+  .studio-app .post-footer p[role="note"] { flex-basis: auto; }
+  .studio-app .post-footer button { width: 100%; white-space: normal; }
+  .studio-app .entitlement-strip a { margin-left: 0; }
+  .studio-app .language-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studio-app .language-list > span { white-space: normal; overflow-wrap: anywhere; }
+  .studio-app .translation-workbench { margin: 0 12px 24px; padding: 16px; }
+}

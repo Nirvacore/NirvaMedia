@@ -153,8 +153,10 @@
 .jobStatus { width: fit-content; padding: 5px 7px; border-radius: 999px; font-size: 7px !important; font-weight: 700; }
 .queued { color: #236c9b; background: #e7f3fa; }
 .blocked_auth { color: #91690c; background: #fff2cb; }
+.publishing { color: #236c9b; background: #e7f3fa; }
 .published { color: #008064; background: #dff7ee; }
 .failed { color: #b74444; background: #ffe9e7; }
+.cancelled { color: #5f6b67; background: #eef1f0; }
 .emptyQueue { min-height: 270px; padding: 45px; display: flex; align-items: center; justify-content: center; flex-direction: column; text-align: center; }
 .emptyQueue > span { width: 55px; height: 55px; display: grid; place-items: center; color: #00a27d; background: #e5f7f0; border-radius: 50%; font-size: 18px; }
 .emptyQueue h3 { margin: 17px 0 6px; font-size: 13px; }

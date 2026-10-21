@@ -1,10 +1,11 @@
 import { guardLocalization, CanonicalLocalizationError } from "../../../lib/mahasunyata/localization-guard";
-import { desc, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "../../../db";
-import { campaignPosts, campaigns } from "../../../db/schema";
+import { campaignPosts, campaigns, publishJobs } from "../../../db/schema";
 import { getLocalizedCampaignCopy } from "../../../lib/nle/campaign-copy";
 import { getNirvaLanguage, isSupportedNirvaLanguage } from "../../../lib/nle/languages";
 import { adaptActiveChannelText, CLAUDE_MEDIA_SOURCE } from "../../../lib/upstream-media-adapter";
+import { internalErrorResponse } from "../../../lib/api-errors";
 
 const channelTemplates: Record<string, { format: string; title: string; body: string }> = {
   Instagram: {
@@ -99,53 +100,104 @@ const channelTemplates: Record<string, { format: string; title: string; body: st
   },
 };
 
-function errorMessage(error: unknown) {
-  const message = error instanceof Error ? error.message : "Unexpected error";
-  if (message.includes("no such table")) {
-    return "Campaign storage is being prepared. Please retry shortly.";
+const storageNotReady = "Campaign storage is being prepared. Please retry shortly.";
+
+type OrderablePost = { id: string; channel: string; createdAt: Date };
+
+/** SQL returns rows in no guaranteed order, so a campaign's posts follow its
+ * saved channel list. Legacy posts whose channel is not listed come after the
+ * listed ones; extra posts for the same position are ordered by creation time,
+ * then id, so the order never depends on how SQLite scanned the rows. */
+function orderBySavedChannels<T extends OrderablePost>(posts: T[], channels: unknown) {
+  const position = new Map<string, number>();
+  for (const channel of Array.isArray(channels) ? channels : []) {
+    if (typeof channel === "string" && !position.has(channel)) position.set(channel, position.size);
   }
-  return message;
+  const rank = (post: T) => position.get(post.channel) ?? position.size;
+  const time = (post: T) => {
+    const value = post.createdAt instanceof Date ? post.createdAt.getTime() : Number.NaN;
+    return Number.isFinite(value) ? value : Number.MAX_SAFE_INTEGER;
+  };
+  return [...posts].sort((a, b) =>
+    rank(a) - rank(b) || time(a) - time(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
 
 export async function GET() {
   try {
     const db = getDb();
-    const recentCampaigns = await db.select().from(campaigns).orderBy(desc(campaigns.createdAt)).limit(8);
+    // Newest first; the unique id breaks creation-time ties so the same 8
+    // campaigns are chosen whichever plan SQLite uses.
+    const recentCampaigns = await db
+      .select()
+      .from(campaigns)
+      .orderBy(desc(campaigns.createdAt), asc(campaigns.id))
+      .limit(8);
     const ids = recentCampaigns.map((campaign) => campaign.id);
-    const posts = ids.length
-      ? await db.select().from(campaignPosts).where(inArray(campaignPosts.campaignId, ids))
+    // Internal queue state lets Studio offer a truthful repair for legacy posts
+    // scheduled without a publish job. Each post and its linked job come from
+    // one statement, so a schedule or cancel committing meanwhile cannot pair
+    // one moment's post with another moment's job (the unique post index
+    // allows at most one). Filtering by campaign keeps D1 bound parameters at
+    // the campaign count rather than the post count.
+    const rows = ids.length
+      ? await db
+          .select({ post: campaignPosts, linkedJobId: publishJobs.id, linkedJobStatus: publishJobs.status })
+          .from(campaignPosts)
+          .leftJoin(publishJobs, eq(publishJobs.postId, campaignPosts.id))
+          .where(inArray(campaignPosts.campaignId, ids))
       : [];
+    const posts = rows.map(({ post, linkedJobId, linkedJobStatus }) => ({
+      ...post,
+      publishJob: linkedJobId !== null && linkedJobStatus !== null ? { id: linkedJobId, status: linkedJobStatus } : null,
+    }));
 
     return Response.json({
       campaigns: recentCampaigns.map((campaign) => ({
         ...campaign,
-        posts: posts.filter((post) => post.campaignId === campaign.id),
+        posts: orderBySavedChannels(posts.filter((post) => post.campaignId === campaign.id), campaign.channels),
       })),
     });
   } catch (error) {
     if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("GET /api/campaigns", error, storageNotReady);
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as {
-      canonical?: unknown;
-      brief?: string;
-      language?: string;
-      tone?: string;
-      channels?: string[];
-    };
-    const brief = payload.brief?.trim() ?? "";
-    const language = payload.language?.trim() ?? "th";
-    const tone = payload.tone?.trim() ?? "อบอุ่นและมั่นใจ";
-    const channels = Array.from(new Set(payload.channels ?? [])).filter((channel) => channel in channelTemplates);
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as Record<string, unknown>;
+    // A missing or null field keeps its meaning (required, or the default). A
+    // value of another type gets that field's fixed 400 below, so it is never
+    // echoed or saved; a string is not a channel list even though it iterates.
+    const brief = typeof payload.brief === "string" ? payload.brief.trim() : "";
+    const requestedLanguage = payload.language ?? "th";
+    const language = typeof requestedLanguage === "string" ? requestedLanguage.trim() : "";
+    const requestedTone = payload.tone ?? "อบอุ่นและมั่นใจ";
+    const tone = typeof requestedTone === "string" ? requestedTone.trim() : null;
+    const requestedChannels = payload.channels ?? [];
+    // Only the templates' own names are channels: an inherited name such as
+    // "toString" is unsupported like any other unknown name.
+    const channels = Array.isArray(requestedChannels) && requestedChannels.every((channel): channel is string => typeof channel === "string")
+      ? Array.from(new Set(requestedChannels)).filter((channel) => Object.hasOwn(channelTemplates, channel))
+      : [];
 
     if (!brief) return Response.json({ error: "brief is required" }, { status: 400 });
     if (!isSupportedNirvaLanguage(language)) {
       return Response.json({ error: "language is not supported by the 21-language NLE registry" }, { status: 400 });
     }
+    if (tone === null) return Response.json({ error: "tone must be a string" }, { status: 400 });
     if (!channels.length) return Response.json({ error: "at least one supported channel is required" }, { status: 400 });
 
     const canonical = guardLocalization(payload.canonical, language);
@@ -203,6 +255,6 @@ export async function POST(request: Request) {
     }, { status: 201 });
   } catch (error) {
     if (error instanceof CanonicalLocalizationError) return Response.json({ error: error.message }, { status: 400 });
-    return Response.json({ error: errorMessage(error) }, { status: 500 });
+    return internalErrorResponse("POST /api/campaigns", error, storageNotReady);
   }
 }

@@ -62,7 +62,7 @@ function studio() {
     change(id, value) { find(node => node.props?.id === id).props.onChange({ target: { value } }); render(); },
     translate() { return find(node => node.type === 'button' && node.props?.onClick?.name === 'translateFreeText').props.onClick(); },
     save() { return find(node => node.type === 'button' && node.props?.onClick?.name === 'saveManualTranslation').props.onClick(); },
-    answer(index, data, ok = true) { requests[index].resolve({ ok, json: async () => data }); },
+    answer(index, data, ok = true, status = ok ? 200 : 400) { requests[index].resolve({ ok, status, json: async () => data }); },
     output() { return find(node => node.props?.className?.startsWith('translation-output')); },
   };
 }
@@ -203,4 +203,325 @@ test('changing channels invalidates pending generation without stripping canonic
   app.answer(1, { campaign: saved });
   await pending; app.render();
   assert.ok(app.node(node => node.props?.className === 'empty-output'));
+});
+
+// Loads one saved post with the given fields into the rendered Studio.
+async function studioWith(fields) {
+  const app = studio();
+  const saved = campaign('queue');
+  Object.assign(saved.posts[0], fields);
+  const generated = app.button('generate-button').props.onClick();
+  app.answer(0, { campaign: saved });
+  await generated; app.render();
+  return { app, post: saved.posts[0] };
+}
+const approvedStudio = () => studioWith({ status: 'approved' });
+const labelled = (...labels) => app => app.node(node => node.type === 'button' && labels.includes(node.props?.children));
+const scheduleButton = labelled('ตั้งเวลาโพสต์', 'กำลังตั้งเวลา...');
+const repairButton = labelled('เพิ่มเข้าคิวภายในตามเวลาเดิม', 'กำลังเพิ่มเข้าคิว...');
+const alertText = app => app.node(node => node.props?.role === 'alert')?.props.children;
+function texts(node, out = []) {
+  if (typeof node === 'string') out.push(node);
+  else if (Array.isArray(node)) node.forEach(child => texts(child, out));
+  else if (node && typeof node === 'object') texts(node.props?.children, out);
+  return out;
+}
+const notes = app => {
+  const found = [];
+  (function walk(node) {
+    if (Array.isArray(node)) return node.forEach(walk);
+    if (!node || typeof node !== 'object') return;
+    if (node.props?.role === 'note') found.push(texts(node.props.children).join(''));
+    walk(node.props?.children);
+  })(app.node(() => true));
+  return found;
+};
+const pageText = app => texts(app.node(() => true)).join('');
+const pause = () => new Promise(resolve => setTimeout(resolve, 5));
+const scheduledReply = (post, scheduledAt, extra = {}) => ({ job: { id: 'job-1', status: 'blocked_auth' }, post: { ...post, status: 'scheduled', scheduledAt }, ...extra });
+
+test('scheduling makes one publish-queue request and shows scheduled only after the server confirms', async () => {
+  const { app, post } = await approvedStudio();
+  const pending = scheduleButton(app).props.onClick();
+  app.render();
+  assert.equal(scheduleButton(app).props.disabled, true);
+  assert.equal(scheduleButton(app).props.children, 'กำลังตั้งเวลา...');
+  assert.equal(app.button('scheduled'), undefined);
+  assert.equal(app.requests.length, 2);
+  assert.equal(app.requests[1].url, '/api/publish-jobs');
+  assert.deepEqual(Object.keys(app.requests[1].payload).sort(), ['channel', 'postId', 'scheduledAt']);
+  assert.equal(app.requests[1].payload.postId, post.id);
+  assert.equal(app.requests[1].payload.channel, post.channel);
+  app.answer(1, scheduledReply(post, app.requests[1].payload.scheduledAt));
+  await pending; app.render();
+  assert.ok(app.button('scheduled'));
+  assert.equal(alertText(app), 'บันทึกเวลาแล้ว แต่ยังรอเชื่อมบัญชีจริงใน Connection Center ก่อนส่งเผยแพร่');
+  assert.equal(app.requests.length, 2, 'no separate post PATCH can diverge from the queue');
+});
+
+test('a rejected schedule leaves the post approved and reports the server reason', async () => {
+  const { app } = await approvedStudio();
+  const pending = scheduleButton(app).props.onClick();
+  app.answer(1, { error: 'channel must match the saved post' }, false);
+  await pending; app.render();
+  assert.equal(app.button('scheduled'), undefined);
+  assert.equal(scheduleButton(app).props.disabled, false);
+  assert.equal(alertText(app), 'ตั้งเวลาโพสต์ไม่สำเร็จ · channel must match the saved post');
+});
+
+test('a retry after an unconfirmed result reuses the schedule so the queue replays it', async () => {
+  const { app, post } = await approvedStudio();
+  const first = scheduleButton(app).props.onClick();
+  app.requests[1].reject(new Error('offline'));
+  await first; app.render();
+  assert.equal(app.button('scheduled'), undefined);
+  assert.equal(alertText(app), 'ยังยืนยันผลการตั้งเวลาไม่ได้ กรุณาลองอีกครั้ง ระบบจะไม่สร้างงานซ้ำ');
+  const retry = scheduleButton(app).props.onClick();
+  assert.equal(app.requests[2].payload.scheduledAt, app.requests[1].payload.scheduledAt);
+  app.answer(2, scheduledReply(post, app.requests[2].payload.scheduledAt, { replayed: true }));
+  await retry; app.render();
+  assert.ok(app.button('scheduled'));
+});
+
+test('an uncertain 5xx keeps the schedule time, so a job that committed is replayed instead of conflicting', async () => {
+  for (const [status, body] of [[500, { error: 'Unexpected error' }], [503, null]]) {
+    const { app, post } = await approvedStudio();
+    const first = scheduleButton(app).props.onClick();
+    app.answer(1, body, false, status);
+    await first; app.render();
+    assert.equal(app.button('scheduled'), undefined, `${status} must not mark the post scheduled`);
+    assert.equal(scheduleButton(app).props.disabled, false);
+    assert.equal(alertText(app), 'ยังยืนยันผลการตั้งเวลาไม่ได้ กรุณาลองอีกครั้ง ระบบจะไม่สร้างงานซ้ำ');
+    await pause(); // a freshly computed time would now differ
+    const retry = scheduleButton(app).props.onClick();
+    assert.equal(app.requests[2].payload.scheduledAt, app.requests[1].payload.scheduledAt, `${status} retry`);
+    app.answer(2, scheduledReply(post, app.requests[2].payload.scheduledAt, { replayed: true }));
+    await retry; app.render();
+    assert.ok(app.button('scheduled'));
+  }
+});
+
+test('a definitive no-write rejection ends the attempt, so the next schedule picks a fresh time', async () => {
+  const { app, post } = await approvedStudio();
+  const first = scheduleButton(app).props.onClick();
+  app.answer(1, { error: 'Smart Publisher is not included in the active workspace solution', code: 'MODULE_NOT_ENTITLED' }, false, 403);
+  await first; app.render();
+  assert.equal(alertText(app), 'ตั้งเวลาโพสต์ไม่สำเร็จ · Smart Publisher is not included in the active workspace solution');
+  await pause();
+  const next = scheduleButton(app).props.onClick();
+  assert.notEqual(app.requests[2].payload.scheduledAt, app.requests[1].payload.scheduledAt);
+  app.answer(2, scheduledReply(post, app.requests[2].payload.scheduledAt));
+  await next; app.render();
+  assert.ok(app.button('scheduled'));
+});
+
+test('a legacy scheduled post without a queue job offers an internal-queue repair at its stored time', async () => {
+  const storedAt = '2026-10-01T00:00:00Z';
+  const { app, post } = await studioWith({ status: 'scheduled', scheduledAt: storedAt, publishJob: null });
+  assert.equal(app.button('scheduled'), undefined, 'an unqueued post is not shown as scheduled in the queue');
+  assert.deepEqual(notes(app), ['ตั้งเวลาไว้แล้ว แต่ยังไม่มีงานในคิวภายใน · ยังไม่ได้ส่งโพสต์ออกภายนอก']);
+  const pending = repairButton(app).props.onClick();
+  app.render();
+  assert.equal(repairButton(app).props.disabled, true);
+  assert.equal(repairButton(app).props.children, 'กำลังเพิ่มเข้าคิว...');
+  assert.equal(app.requests[1].url, '/api/publish-jobs');
+  assert.deepEqual(app.requests[1].payload, { postId: post.id, channel: post.channel, scheduledAt: storedAt });
+  app.answer(1, scheduledReply(post, storedAt));
+  await pending; app.render();
+  assert.ok(app.button('scheduled'));
+  assert.equal(repairButton(app), undefined);
+  assert.deepEqual(notes(app), []);
+  assert.equal(alertText(app), 'บันทึกเวลาแล้ว แต่ยังรอเชื่อมบัญชีจริงใน Connection Center ก่อนส่งเผยแพร่');
+  assert.doesNotMatch(pageText(app), /เผยแพร่แล้ว/, 'queueing never claims external publication');
+});
+
+test('the legacy repair keeps the stored time across uncertain retries and reports a definitive conflict', async () => {
+  const storedAt = '2026-10-01T00:00:00Z';
+  const { app, post } = await studioWith({ status: 'scheduled', scheduledAt: storedAt, publishJob: null });
+  const first = repairButton(app).props.onClick();
+  app.answer(1, { error: 'Unexpected error' }, false, 500);
+  await first; app.render();
+  assert.ok(repairButton(app), 'the repair stays available after an uncertain reply');
+  const retry = repairButton(app).props.onClick();
+  assert.equal(app.requests[2].payload.scheduledAt, storedAt);
+  app.answer(2, { error: 'post already has a publish job for a different channel or schedule; re-timing queued posts is not available yet', code: 'PUBLISH_JOB_EXISTS', post: { ...post, scheduledAt: storedAt }, job: { id: 'other', status: 'blocked_auth' } }, false, 409);
+  await retry; app.render();
+  assert.ok(app.button('scheduled'), 'the server reports a queue job, so the repair is no longer offered');
+  assert.equal(repairButton(app), undefined);
+  assert.match(alertText(app), /^ตั้งเวลาโพสต์ไม่สำเร็จ · post already has a publish job/);
+});
+
+test('a legacy scheduled post without a stored time offers a return to approved instead of a schedule claim', async () => {
+  const { app, post } = await studioWith({ status: 'scheduled', scheduledAt: null, publishJob: null });
+  assert.equal(app.button('scheduled'), undefined);
+  assert.equal(repairButton(app), undefined, 'there is no stored time to queue');
+  assert.deepEqual(notes(app), ['สถานะตั้งเวลา แต่ไม่มีเวลาที่บันทึกไว้และไม่มีงานในคิวภายใน · ยังไม่ได้ส่งโพสต์ออกภายนอก']);
+  const pending = labelled('กลับเป็นอนุมัติเพื่อตั้งเวลาใหม่')(app).props.onClick();
+  assert.equal(app.requests[1].url, `/api/posts/${post.id}`);
+  assert.deepEqual(app.requests[1].payload, { status: 'approved' });
+  app.answer(1, { post: { ...post, status: 'approved', scheduledAt: null } });
+  await pending; app.render();
+  assert.equal(scheduleButton(app).props.disabled, false);
+  assert.deepEqual(notes(app), []);
+});
+
+test('scheduled posts with a queue job, or with unknown queue state, keep the existing scheduled label', async () => {
+  for (const publishJob of [{ id: 'job-1', status: 'blocked_auth' }, undefined]) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-01T00:00:00Z', publishJob });
+    assert.equal(app.button('scheduled').props.disabled, true);
+    assert.equal(repairButton(app), undefined);
+    assert.deepEqual(notes(app), []);
+  }
+});
+
+test('canonical legacy posts keep repair actions disabled while trusted review is unavailable', async () => {
+  const canonical = { concept_id: 'MSU-GOV-ROLE-HUMILITY-001', source_concept_version: '0.1.0' };
+  for (const scheduledAt of ['2026-10-01T00:00:00Z', null]) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt, publishJob: null, canonical });
+    const action = scheduledAt ? repairButton(app) : labelled('กลับเป็นอนุมัติเพื่อตั้งเวลาใหม่')(app);
+    assert.equal(action.props.disabled, true);
+  }
+});
+
+const cancelButton = labelled('ยกเลิกงานในคิวภายใน', 'กำลังยกเลิกงานในคิว...');
+const queuedStudio = (status = 'blocked_auth') => studioWith({ status: 'scheduled', scheduledAt: '2026-10-21T00:00:00.000Z', publishJob: { id: 'job-1', status } });
+const cancelledReply = post => ({ cancelled: true, job: { id: 'job-1', status: 'cancelled', postId: null, attempts: 0 }, post: { ...post, status: 'approved', scheduledAt: null, publishJob: null } });
+
+test('cancelling an internal queue job returns the post to approved only after the server confirms', async () => {
+  for (const status of ['blocked_auth', 'queued']) {
+    const { app, post } = await queuedStudio(status);
+    assert.equal(app.button('scheduled').props.disabled, true, 'the existing scheduled label stays');
+    const pending = cancelButton(app).props.onClick();
+    app.render();
+    assert.equal(cancelButton(app).props.disabled, true);
+    assert.equal(cancelButton(app).props.children, 'กำลังยกเลิกงานในคิว...');
+    assert.equal(app.requests[1].url, '/api/publish-jobs/job-1/cancel');
+    assert.deepEqual(app.requests[1].payload, { postId: post.id });
+    assert.ok(app.button('scheduled'), 'still scheduled until confirmed');
+    app.answer(1, cancelledReply(post));
+    await pending; app.render();
+    assert.equal(app.button('scheduled'), undefined);
+    assert.equal(cancelButton(app), undefined);
+    assert.equal(scheduleButton(app).props.disabled, false, 'the post can be scheduled again');
+    assert.equal(alertText(app), 'ยกเลิกงานในคิวภายในแล้ว · โพสต์กลับเป็นอนุมัติและไม่เคยถูกส่งออกภายนอก');
+    assert.doesNotMatch(pageText(app), /เผยแพร่แล้ว/);
+  }
+});
+
+test('an in-flight job has no internal queue cancel action', async () => {
+  const { app } = await queuedStudio('publishing');
+  assert.ok(app.button('scheduled'));
+  assert.equal(cancelButton(app), undefined);
+});
+
+test('a cancel the queue refuses keeps the post scheduled and reports the server reason', async () => {
+  const { app, post } = await queuedStudio('queued');
+  const pending = cancelButton(app).props.onClick();
+  app.answer(1, { error: 'only an internal queue job of this post that has not started an external publish attempt can be cancelled', code: 'JOB_NOT_CANCELLABLE', job: { id: 'job-1', status: 'publishing', postId: post.id, attempts: 1 }, post }, false, 409);
+  await pending; app.render();
+  assert.ok(app.button('scheduled'));
+  assert.equal(alertText(app), 'ยกเลิกงานในคิวไม่สำเร็จ · only an internal queue job of this post that has not started an external publish attempt can be cancelled');
+});
+
+test('an uncertain cancel reply changes nothing and the retry asks the same job again', async () => {
+  const { app, post } = await queuedStudio();
+  const first = cancelButton(app).props.onClick();
+  app.answer(1, { error: 'Unexpected error' }, false, 500);
+  await first; app.render();
+  assert.ok(app.button('scheduled'));
+  assert.equal(alertText(app), 'ยังยืนยันผลการยกเลิกไม่ได้ กรุณาลองอีกครั้ง ระบบจะไม่ยกเลิกซ้ำ');
+  const retry = cancelButton(app).props.onClick();
+  assert.equal(app.requests[2].url, '/api/publish-jobs/job-1/cancel');
+  app.answer(2, { ...cancelledReply(post), replayed: true });
+  await retry; app.render();
+  assert.equal(app.button('scheduled'), undefined);
+});
+
+test('jobs outside the internal queue and unknown queue state never offer a cancel', async () => {
+  for (const status of ['published', 'failed', 'cancelled']) {
+    const { app } = await queuedStudio(status);
+    assert.equal(cancelButton(app), undefined, status);
+  }
+  const unknown = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-21T00:00:00.000Z', publishJob: undefined });
+  assert.equal(cancelButton(unknown.app), undefined);
+});
+
+test('a replayed old cancel keeps the rescheduled post and its new job instead of hiding it', async () => {
+  const { app, post } = await queuedStudio();
+  const pending = cancelButton(app).props.onClick();
+  app.answer(1, {
+    cancelled: true, replayed: true,
+    job: { id: 'job-1', status: 'cancelled', postId: null, attempts: 0 },
+    post: { ...post, status: 'scheduled', scheduledAt: '2026-10-22T00:00:00.000Z', publishJob: { id: 'job-2', status: 'blocked_auth' } },
+  });
+  await pending; app.render();
+  assert.ok(app.button('scheduled'), 'the new schedule stays visible');
+  assert.deepEqual(notes(app), [], 'not shown as a schedule without a queue job');
+  assert.equal(repairButton(app), undefined);
+  assert.equal(scheduleButton(app), undefined);
+  assert.equal(alertText(app), 'งานเดิมถูกยกเลิกไปแล้ว · งานใหม่ของโพสต์นี้ยังอยู่ในคิวภายใน');
+  const next = cancelButton(app).props.onClick();
+  assert.equal(app.requests[2].url, '/api/publish-jobs/job-2/cancel', 'a later cancel targets the new job');
+  app.answer(2, { cancelled: true, job: { id: 'job-2', status: 'cancelled', postId: null, attempts: 0 }, post: { ...post, status: 'approved', scheduledAt: null, publishJob: null } });
+  await next; app.render();
+  assert.equal(scheduleButton(app).props.disabled, false);
+});
+
+test('a refused cancel takes the post queue state from the server, not from the requested job', async () => {
+  const { app, post } = await queuedStudio();
+  const pending = cancelButton(app).props.onClick();
+  app.answer(1, {
+    error: 'only an internal queue job of this post that has not started an external publish attempt can be cancelled', code: 'JOB_NOT_CANCELLABLE',
+    job: { id: 'job-1', status: 'failed', postId: null, attempts: 0 },
+    post: { ...post, status: 'scheduled', publishJob: { id: 'job-0', status: 'blocked_auth' } },
+  }, false, 409);
+  await pending; app.render();
+  assert.ok(app.button('scheduled'));
+  assert.deepEqual(notes(app), [], 'the post still has a linked job');
+  assert.match(alertText(app), /^ยกเลิกงานในคิวไม่สำเร็จ · /);
+  const next = cancelButton(app).props.onClick();
+  assert.equal(app.requests[2].url, '/api/publish-jobs/job-0/cancel');
+  app.answer(2, { error: 'x', code: 'JOB_NOT_CANCELLABLE', job: null, post: { ...post, publishJob: { id: 'job-0', status: 'blocked_auth' } } }, false, 409);
+  await next;
+});
+
+test('a replayed cancel for a post that moved on does not claim it returned to approved', async () => {
+  const { app, post } = await queuedStudio();
+  const pending = cancelButton(app).props.onClick();
+  app.answer(1, { cancelled: true, replayed: true, job: { id: 'job-1', status: 'cancelled', postId: null, attempts: 0 }, post: { ...post, status: 'archived', scheduledAt: null, publishJob: null } });
+  await pending; app.render();
+  assert.equal(alertText(app), 'ยกเลิกงานในคิวภายในแล้ว · งานนี้ไม่เคยถูกส่งออกภายนอก');
+  assert.equal(app.button('scheduled'), undefined);
+});
+
+test('a scheduled post whose queue job stopped is not shown as scheduled, from history or a refused retry', async () => {
+  for (const jobStatus of ['failed', 'cancelled']) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-20T02:30:00.000Z', publishJob: { id: 'job-1', status: jobStatus } });
+    assert.equal(app.button('scheduled'), undefined, `${jobStatus}: the stopped job is not presented as a coming publish`);
+    assert.deepEqual(notes(app), [`งานในคิวภายในหยุดแล้ว (${jobStatus}) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่`]);
+    assert.equal(cancelButton(app), undefined);
+    assert.equal(repairButton(app), undefined, 'no recovery is offered until one is defined');
+    assert.equal(scheduleButton(app), undefined);
+  }
+  for (const jobStatus of ['queued', 'blocked_auth', 'publishing', 'published']) {
+    const { app } = await studioWith({ status: 'scheduled', scheduledAt: '2026-10-20T02:30:00.000Z', publishJob: { id: 'job-1', status: jobStatus } });
+    assert.equal(app.button('scheduled').props.disabled, true, `${jobStatus}: a standing job keeps the scheduled label`);
+    assert.deepEqual(notes(app), [], jobStatus);
+  }
+
+  // The server refuses a same-time retry of a stopped job with a definitive 409.
+  const { app, post } = await approvedStudio();
+  const pending = scheduleButton(app).props.onClick();
+  const scheduledAt = app.requests[1].payload.scheduledAt;
+  app.answer(1, {
+    error: "this post's publish job ended as failed and will not publish; retrying or replacing it is not available yet",
+    code: 'PUBLISH_JOB_STOPPED',
+    post: { ...post, status: 'scheduled', scheduledAt },
+    job: { id: 'job-1', status: 'failed', postId: post.id, attempts: 1 },
+  }, false, 409);
+  await pending; app.render();
+  assert.equal(app.button('scheduled'), undefined);
+  assert.deepEqual(notes(app), ['งานในคิวภายในหยุดแล้ว (failed) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่']);
+  assert.match(alertText(app), /^ตั้งเวลาโพสต์ไม่สำเร็จ · /);
+  assert.equal(scheduleButton(app), undefined, 'the refused retry does not offer another schedule');
 });

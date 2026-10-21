@@ -76,6 +76,28 @@ and `memorySource: "manual"`. Callers should submit reviewed translations,
 but this endpoint does not authenticate a reviewer or establish semantic
 approval. In particular, `manual` never approves canonical content.
 
+## Write-request errors
+
+`POST /api/translations`, `PUT /api/translations`, and
+`POST /api/translations/remember` check the Language Engine entitlement before
+reading the request body. Without it, they return HTTP 403 and leave the body
+unread.
+
+- Malformed or empty JSON returns HTTP 400 with the fixed error
+  `request body must be valid JSON`.
+- Valid JSON that is not an object, including `null`, returns the route's
+  existing HTTP 400 required-fields error. Translation requires `sourceText`,
+  `sourceLanguage`, and `targetLanguage`; remembering also requires
+  `translatedText`.
+- A failed body stream or another unexpected internal failure returns HTTP 500
+  with a generic message, a code and an `errorId`. The response and the
+  allowlisted server diagnostic do not include the request body, exception
+  text, SQL, or bound parameters. Storage that is not migrated yet keeps its
+  `STORAGE_NOT_READY` code and retry message.
+
+Provider HTTP 502/503 responses described above apply to translation after a
+valid request, not to either remember endpoint.
+
 ## List Translation Memory
 
 `GET /api/translations?limit=50&sourceLanguage=th&targetLanguage=en`
@@ -152,12 +174,15 @@ does not certify its meaning. The association cannot be edited or removed via
 For any saved canonical post, `PATCH /api/posts/[id]` rejects transitions to
 `approved`, `scheduled` or `published` with HTTP 409 and
 `CANONICAL_HUMAN_REVIEW_REQUIRED`. Draft/review/archive workflow remains
-available. `POST /api/publish-jobs` resolves a supplied `postId` and checks the
+available. `POST /api/publish-jobs` requires a saved `postId` and checks the
 stored association before creating any job or audit event, even if an account
 is connected or the client omits the envelope. Unknown post IDs return 404;
-a channel must match the saved post. An explicitly canonical standalone job is
-also blocked. Generic posts and generic standalone jobs retain the current
-queue behavior.
+a channel must match the saved post. An explicitly canonical payload is also
+blocked. Standalone jobs without a saved post are rejected; generic approved
+posts are scheduled only through this endpoint, which saves the post schedule,
+its single publish job and the audit event together. `POST
+/api/publish-jobs/:id/cancel` also returns 409 `CANONICAL_HUMAN_REVIEW_REQUIRED`
+for a canonical post, because cancelling returns the post to `approved`.
 
 All associated canonical content is conservatively gated, including policy and
 governance. Structural envelope preservation is not semantic equivalence. No

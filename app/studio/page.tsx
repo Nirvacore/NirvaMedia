@@ -15,6 +15,8 @@ const allChannelOptions = [
 
 type StudioPost = {
   canonical?: StudioCanonical | null;
+  /** Internal queue job; `null` means the server confirmed none exists. */
+  publishJob?: { id: string; status: string } | null;
   id: string;
   campaignId: string;
   channel: string;
@@ -102,6 +104,28 @@ function tomorrowIso() {
   return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 }
 
+// POST /api/publish-jobs answers these statuses, with a JSON `error`, only when
+// the request itself wrote nothing (validation, entitlement, canonical review
+// or an existing queue job).
+const noWriteStatuses = [400, 403, 404, 409];
+
+/** Scheduled by the earlier two-request flow without an internal queue job. */
+function isUnqueuedSchedule(post: StudioPost) {
+  return post.status === "scheduled" && post.publishJob === null;
+}
+
+// Mirrors CANCELLABLE_JOB_STATUSES in lib/publish-queue.ts (server-only). The
+// server also refuses jobs that already started an external attempt.
+const cancellableJobStatuses = ["queued", "blocked_auth"];
+
+// Mirrors STOPPED_JOB_STATUSES in app/api/publish-jobs/route.ts: a linked job
+// in one of these states will not publish, and no retry flow exists yet.
+const stoppedJobStatuses = ["failed", "cancelled"];
+
+function hasStoppedJob(post: StudioPost) {
+  return post.status === "scheduled" && !!post.publishJob && stoppedJobStatuses.includes(post.publishJob.status);
+}
+
 export default function StudioPage() {
   const [channels, setChannels] = useState(["Instagram", "Facebook", "LINE OA"]);
   const [language, setLanguage] = useState("th");
@@ -126,12 +150,17 @@ export default function StudioPage() {
   const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
   const [manualTranslation, setManualTranslation] = useState("");
   const [savingMemory, setSavingMemory] = useState(false);
+  const [schedulingPostIds, setSchedulingPostIds] = useState<string[]>([]);
+  const [cancellingPostIds, setCancellingPostIds] = useState<string[]>([]);
 
   // Responses belong to the input revision that started them. Editing or
   // opening another campaign must not let an older request replace that view.
   const campaignRevision = useRef(0);
   const translationRevision = useRef(0);
   const pendingRequests = useRef({ campaigns: 0, translations: 0, memories: 0 });
+  // A retry after an unconfirmed scheduling request reuses the same time, so
+  // the publish queue replays the existing job instead of reporting a conflict.
+  const scheduleAttempts = useRef(new Map<string, string>());
 
   function invalidateCampaign() {
     campaignRevision.current += 1;
@@ -215,37 +244,87 @@ export default function StudioPage() {
     setError("");
   }
 
+  function replacePost(next: StudioPost) {
+    setPosts((current) => current.map((item) => item.id === next.id ? next : item));
+    setRecentCampaigns((current) => current.map((campaign) => ({
+      ...campaign,
+      posts: campaign.posts.map((item) => item.id === next.id ? next : item),
+    })));
+  }
+
   async function schedulePost(post: StudioPost) {
     setError("");
-    const scheduledAt = tomorrowIso();
+    // A legacy scheduled post is queued at its stored time. A new schedule
+    // reuses the time of an unconfirmed attempt so the queue can replay it.
+    const scheduledAt = post.status === "scheduled" && post.scheduledAt
+      ? post.scheduledAt
+      : scheduleAttempts.current.get(post.id) ?? tomorrowIso();
+    scheduleAttempts.current.set(post.id, scheduledAt);
+    setSchedulingPostIds((current) => [...current, post.id]);
     try {
-      const response = await fetch(`/api/posts/${post.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scheduledAt }),
-      });
-      if (!response.ok) throw new Error("ตั้งเวลาไม่สำเร็จ");
-      const data = await response.json();
-      setPosts((current) => current.map((item) => item.id === post.id ? data.post : item));
-      setRecentCampaigns((current) => current.map((campaign) => ({
-        ...campaign,
-        posts: campaign.posts.map((item) => item.id === post.id ? data.post : item),
-      })));
-      const queueResponse = await fetch("/api/publish-jobs", {
+      // One request saves the post schedule, its publish job and audit event
+      // together; the post only shows as scheduled when the server says so.
+      const response = await fetch("/api/publish-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ postId: post.id, channel: post.channel, scheduledAt }),
       });
-      if (queueResponse.ok) {
-        const queueData = await queueResponse.json();
-        if (queueData.job?.status === "blocked_auth") {
-          setError("บันทึกเวลาแล้ว แต่ยังรอเชื่อมบัญชีจริงใน Connection Center ก่อนส่งเผยแพร่");
-        }
-      } else {
-        setError("บันทึกเวลาแล้ว แต่ยังเพิ่มงานเข้าคิวเผยแพร่ไม่ได้ กรุณาลองจาก Connection Center");
+      const data = await response.json().catch(() => null);
+      // Only a confirmed job or a definitive no-write answer ends the attempt.
+      // A 5xx, an unreadable body or any other status may follow a commit, so
+      // the retry keeps the same time and the queue replays that job.
+      const confirmed = response.ok && !!data?.job && !!data?.post;
+      const rejected = !response.ok && noWriteStatuses.includes(response.status) && typeof data?.error === "string";
+      if (!confirmed && !rejected) throw new Error("unconfirmed scheduling result");
+      scheduleAttempts.current.delete(post.id);
+      // `job` is omitted when the server did not read the queue: keep it unknown.
+      if (data.post) replacePost({ ...data.post, publishJob: data.job === undefined ? undefined : data.job && { id: data.job.id, status: data.job.status } });
+      if (rejected) {
+        setError(`ตั้งเวลาโพสต์ไม่สำเร็จ · ${data.error}`);
+      } else if (data.job.status === "blocked_auth") {
+        setError("บันทึกเวลาแล้ว แต่ยังรอเชื่อมบัญชีจริงใน Connection Center ก่อนส่งเผยแพร่");
       }
     } catch {
-      setError("ตั้งเวลาโพสต์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      setError("ยังยืนยันผลการตั้งเวลาไม่ได้ กรุณาลองอีกครั้ง ระบบจะไม่สร้างงานซ้ำ");
+    } finally {
+      setSchedulingPostIds((current) => current.filter((id) => id !== post.id));
+    }
+  }
+
+  async function cancelQueuedPost(post: StudioPost) {
+    const job = post.publishJob;
+    if (!job) return;
+    setError("");
+    setCancellingPostIds((current) => [...current, post.id]);
+    try {
+      // Cancels only the internal queue job; nothing has been sent externally.
+      // A retry is safe: the queue replays a cancel that already committed.
+      const response = await fetch(`/api/publish-jobs/${job.id}/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ postId: post.id }),
+      });
+      const data = await response.json().catch(() => null);
+      const confirmed = response.ok && data?.cancelled === true && !!data?.post;
+      const rejected = !response.ok && noWriteStatuses.includes(response.status) && typeof data?.error === "string";
+      if (!confirmed && !rejected) throw new Error("unconfirmed cancel result");
+      // The server reports the post as it is now, with its currently linked
+      // job. A retried old cancel can arrive after the post was scheduled
+      // again, so the new job must come from the server, not be assumed gone.
+      if (data.post) replacePost(data.post);
+      if (rejected) {
+        setError(`ยกเลิกงานในคิวไม่สำเร็จ · ${data.error}`);
+      } else if (data.post.publishJob) {
+        setError("งานเดิมถูกยกเลิกไปแล้ว · งานใหม่ของโพสต์นี้ยังอยู่ในคิวภายใน");
+      } else if (data.post.status === "approved") {
+        setError("ยกเลิกงานในคิวภายในแล้ว · โพสต์กลับเป็นอนุมัติและไม่เคยถูกส่งออกภายนอก");
+      } else {
+        setError("ยกเลิกงานในคิวภายในแล้ว · งานนี้ไม่เคยถูกส่งออกภายนอก");
+      }
+    } catch {
+      setError("ยังยืนยันผลการยกเลิกไม่ได้ กรุณาลองอีกครั้ง ระบบจะไม่ยกเลิกซ้ำ");
+    } finally {
+      setCancellingPostIds((current) => current.filter((id) => id !== post.id));
     }
   }
 
@@ -259,11 +338,7 @@ export default function StudioPage() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "เปลี่ยนสถานะไม่สำเร็จ");
-      setPosts((current) => current.map((item) => item.id === post.id ? data.post : item));
-      setRecentCampaigns((current) => current.map((campaign) => ({
-        ...campaign,
-        posts: campaign.posts.map((item) => item.id === post.id ? data.post : item),
-      })));
+      replacePost(data.post);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "เปลี่ยนสถานะไม่สำเร็จ");
     }
@@ -464,8 +539,13 @@ export default function StudioPage() {
                         {post.status === "draft" && <button onClick={() => transitionPost(post, "review")}>ส่งตรวจ</button>}
                         {post.canonical && <p role="note">รอตรวจความหมายโดยผู้รับผิดชอบ / Pending trusted semantic review — {post.canonical.concept_id} v{post.canonical.source_concept_version}</p>}
                         {post.status === "review" && <button disabled={!!post.canonical} onClick={() => transitionPost(post, "approved")}>อนุมัติ</button>}
-                        {post.status === "approved" && <button disabled={!canPublish || !!post.canonical} onClick={() => schedulePost(post)}>{canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button>}
-                        {post.status === "scheduled" && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
+                        {post.status === "approved" && <button disabled={!canPublish || !!post.canonical || schedulingPostIds.includes(post.id)} onClick={() => schedulePost(post)}>{schedulingPostIds.includes(post.id) ? "กำลังตั้งเวลา..." : canPublish ? "ตั้งเวลาโพสต์" : "ต้องมี Publisher"}</button>}
+                        {isUnqueuedSchedule(post) && <p role="note">{post.scheduledAt ? "ตั้งเวลาไว้แล้ว แต่ยังไม่มีงานในคิวภายใน" : "สถานะตั้งเวลา แต่ไม่มีเวลาที่บันทึกไว้และไม่มีงานในคิวภายใน"} · ยังไม่ได้ส่งโพสต์ออกภายนอก</p>}
+                        {isUnqueuedSchedule(post) && !!post.scheduledAt && <button disabled={!canPublish || !!post.canonical || schedulingPostIds.includes(post.id)} onClick={() => schedulePost(post)}>{schedulingPostIds.includes(post.id) ? "กำลังเพิ่มเข้าคิว..." : canPublish ? "เพิ่มเข้าคิวภายในตามเวลาเดิม" : "ต้องมี Publisher"}</button>}
+                        {isUnqueuedSchedule(post) && !post.scheduledAt && <button disabled={!!post.canonical} onClick={() => transitionPost(post, "approved")}>กลับเป็นอนุมัติเพื่อตั้งเวลาใหม่</button>}
+                        {hasStoppedJob(post) && <p role="note">งานในคิวภายในหยุดแล้ว ({post.publishJob?.status}) · โพสต์นี้จะไม่ถูกส่งตามเวลาที่ตั้งไว้ และยังไม่มีขั้นตอนลองใหม่</p>}
+                        {post.status === "scheduled" && !isUnqueuedSchedule(post) && !hasStoppedJob(post) && <button className="scheduled" disabled>✓ ตั้งเวลาแล้ว</button>}
+                        {post.status === "scheduled" && post.publishJob && cancellableJobStatuses.includes(post.publishJob.status) && <button disabled={!canPublish || !!post.canonical || cancellingPostIds.includes(post.id)} onClick={() => cancelQueuedPost(post)}>{cancellingPostIds.includes(post.id) ? "กำลังยกเลิกงานในคิว..." : canPublish ? "ยกเลิกงานในคิวภายใน" : "ต้องมี Publisher"}</button>}
                       </div>
                     </div>
                   </article>

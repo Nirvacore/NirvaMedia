@@ -2,7 +2,7 @@
 title: Nirva Media Product Memory
 project: Nirva Media
 owner: Nirvacore
-updated: 2026-09-15
+updated: 2026-10-21
 status: active-development
 tags:
   - nirva
@@ -89,8 +89,10 @@ The preserved Claude source under both `upstream/` directories stays unchanged.
   Studio modules, language controls, publishing actions, and channel visibility
 - Connection Center with six entitlement-aware connector families, persistent
   account setup records, a publish queue, and connector audit events
-- Campaign Studio scheduling now creates a publish job and truthfully blocks it
-  for authorization until a matching external account is connected
+- Campaign Studio scheduling atomically saves the post schedule, one publish
+  job per post and its audit event, and truthfully blocks the job for
+  authorization until a matching external account is connected; an internal
+  job can be cancelled before any external attempt starts
 - Active NLE adapter with the upstream 21-language registry, 12 writing
   systems, deterministic script detection, `Intl` localization, curated Studio
   draft copy for all 21 languages, and RTL layout for Arabic and Hebrew
@@ -203,6 +205,96 @@ formats, limits, and errors.
    and customer-facing connection onboarding.
 
 ## Recent implementation
+
+- 2026-10-19: Repaired publish-queue integrity on branch
+  `kiro/media-queue-integrity-20261019`. `POST /api/publish-jobs` is the only
+  scheduling path: it requires a saved approved post, that post's channel and
+  a valid `scheduledAt`, then writes the post schedule, publish job and audit
+  event in one D1 batch whose job insert re-checks the post inside the
+  transaction. Migration `0006_publish_job_post_guard.sql` adds a unique
+  `publish_jobs.post_id` index after detaching (not deleting) duplicates from
+  earlier retries, failing pending ones and auditing each; apply it with the
+  application rollout. Same-schedule retries return the existing job
+  (`replayed: true`); other times return 409 until re-timing exists.
+  `PATCH /api/posts/:id` can no longer set `scheduled` or `published` or
+  change a post that has a job. The route now also requires the
+  `smart-publisher` module server-side (403 `MODULE_NOT_ENTITLED`), alongside
+  the unchanged connector, account and canonical checks. Studio sends one
+  request, shows a post as scheduled only after the server confirms, and keeps
+  the same time for retries until a confirmed job or a definitive no-write
+  answer (400/403/404/409 with an error); 5xx and unreadable replies keep it.
+  `GET /api/campaigns` reports each post's internal `publishJob` (or `null`),
+  so Studio labels legacy scheduled posts without a job as not queued and not
+  sent externally, and offers queueing at the stored time (or a return to
+  approved when no time was stored). Not deployed.
+
+- 2026-10-20: Added internal-only cancellation on the same branch.
+  `POST /api/publish-jobs/:id/cancel` with the scheduled post's `postId`
+  cancels a `queued` or `blocked_auth` job that has never started an external
+  attempt (`attempts = 0`). One D1 batch writes a `publish_job.cancelled`
+  audit event, returns the post to `approved` with no time, and marks the job
+  `cancelled` while detaching it from the post so it can be scheduled again;
+  the event insert re-checks job and post inside the transaction. Retries
+  replay. The same Smart Publisher, connector and canonical gates apply. No
+  publishing worker exists yet; `lib/publish-queue.ts` defines the claim a
+  future worker must use (atomically move `queued` to `publishing` and add one
+  attempt only while linked and at the expected count), so a second claim
+  cannot reserve an in-flight job and a claim and cancel cannot both win.
+  No worker, completion or retry/recovery transition exists yet. Studio offers
+  "ยกเลิกงานในคิวภายใน" on scheduled posts with an internal job and shows the
+  post as approved only after the server confirms; Connection Center labels
+  cancelled jobs. No schema migration was needed (`status` is unconstrained
+  text). Remaining queue gaps: re-timing, cancelling after an attempt started,
+  legacy approved posts that still have a job, and who may cancel once
+  workspace roles exist. Not deployed.
+- 2026-10-20: 500 responses from `/api/campaigns`, `/api/publish-jobs`, its
+  cancel route, `PATCH /api/posts/:id`, `/api/connections`,
+  `/api/entitlements` and `/api/solutions` no longer echo exception text.
+  Clients get a generic message, `code` (`INTERNAL_ERROR` or
+  `STORAGE_NOT_READY`) and an `errorId`. The server logs one
+  `api.internal_error` JSON line with allowlisted metadata only: `errorId`,
+  `route`, `code` and SQLite result codes from a fixed whitelist. No error
+  message, cause, SQL or parameters are logged, even redacted
+  (`lib/api-errors.ts`). 4xx and canonical validation answers are unchanged.
+  Committed as `3a4d508` on `kiro/media-queue-integrity-20261019` (pushed to
+  the branch, not merged or deployed).
+- 2026-10-20: The same redaction now covers the Translation Memory routes:
+  `GET`/`POST /api/translations`, `PUT /api/translations` and
+  `POST /api/translations/remember`. A failed memory write had returned SQL
+  whose bound parameters include the user's source and translated text, and
+  an unreadable request body had returned the JSON parser's message. 4xx,
+  413, canonical 400s and the provider 502/503 answers are unchanged.
+  `POST /api/languages` now answers rejected localize input with a fixed 400
+  and unexpected failures with the shared generic 500. Not merged or
+  deployed.
+- 2026-10-21: Finished request-body handling on `POST /api/languages`, the
+  three Translation Memory write routes, `POST /api/publish-jobs`, its
+  cancel route and `POST /api/campaigns`. Each reads the body as text before
+  parsing it. Malformed or empty JSON gets the fixed 400
+  `request body must be valid JSON`; JSON that is not an object, `null`
+  included, gets the route's existing required-input 400. A failure while
+  reading the body is internal even when it is reported as a `SyntaxError`:
+  the shared generic 500 and one allowlisted log line. `POST /api/campaigns`
+  also answers a wrong-typed `brief`, `language`, `tone` or `channels` with
+  a fixed 400 that never echoes the value. A `channels` value must be a list
+  of strings (a string is no longer read character by character), and names
+  inherited from `Object.prototype`, such as `toString`, are treated as
+  unknown channels. A missing or `null` field keeps its required or default
+  meaning. Rejected requests write nothing; other successful and validation
+  answers are unchanged. The `PUT /api/entitlements` route now handles its
+  body the same way: malformed or empty JSON gets the fixed 400
+  `request body must be valid JSON`, `null` gets the route's existing
+  `solutionConfigId is required` 400, and neither case writes an
+  entitlement or logs. A failure while reading its body still gets the
+  shared generic 500. `POST /api/solutions` and `POST /api/connections`
+  follow the same rules, with `null` getting their existing
+  `name is required` and `a supported connectorId is required` 400s
+  respectively. A malformed, empty or null body saves no configuration,
+  account or event and logs nothing. `PATCH /api/posts/:id` follows the
+  same rules: `null` gets its existing `status or scheduledAt is required`
+  400, and a rejected body changes no post, job or audit event. No JSON
+  body route still parses its body with `request.json()`.
+  Not merged or deployed.
 
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.
