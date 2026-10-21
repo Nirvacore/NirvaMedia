@@ -281,10 +281,14 @@ formats, limits, and errors.
   inherited from `Object.prototype`, such as `toString`, are treated as
   unknown channels. A missing or `null` field keeps its required or default
   meaning. Rejected requests write nothing; other successful and validation
-  answers are unchanged. `PATCH /api/posts/:id`, `POST /api/connections`,
-  `PUT /api/entitlements` and `POST /api/solutions` still answer malformed
-  JSON with the generic 500 and are the next candidates. Not merged or
-  deployed.
+  answers are unchanged. The `PUT /api/entitlements` route now handles its
+  body the same way: malformed or empty JSON gets the fixed 400
+  `request body must be valid JSON`, `null` gets the route's existing
+  `solutionConfigId is required` 400, and neither case writes an
+  entitlement or logs. A failure while reading its body still gets the
+  shared generic 500. `PATCH /api/posts/:id`, `POST /api/connections` and
+  `POST /api/solutions` still answer malformed JSON with the generic 500
+  and are the next candidates. Not merged or deployed.
 
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.

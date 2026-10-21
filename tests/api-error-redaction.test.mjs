@@ -1090,3 +1090,93 @@ test('campaigns: missing or null fields keep their existing required or default 
   }
   assert.deepEqual(logs, []);
 });
+
+// PUT /api/entitlements: synthetic solutions only, no account, OAuth or
+// publishing. Malformed or empty JSON is the caller's error: one fixed 400, no
+// log and no entitlement write. JSON that is not an object, null included,
+// gets the route's existing solutionConfigId-required 400. Any failure to read
+// the body stays internal.
+const entitlementsUrl = 'https://example.test/api/entitlements';
+const sendEntitlementsBody = async body => {
+  const response = await entitlements.PUT(new Request(entitlementsUrl, { method: 'PUT', body, headers: { 'content-type': 'application/json' } }));
+  return { status: response.status, body: await response.json() };
+};
+const entitlementState = () => ({
+  entitlements: runtime.sqlite.prepare('SELECT * FROM workspace_entitlements ORDER BY workspace_id').all().map(row => ({ ...row })),
+  solutions: runtime.sqlite.prepare('SELECT COUNT(*) AS c FROM solution_configs').get().c,
+});
+const syntheticSolution = async () => {
+  const saved = await call(solutions.POST, { name: 'Synthetic entitlement solution', moduleIds: ['content-studio'], connectorIds: ['meta-network'] });
+  assert.equal(saved.status, 201);
+  return saved.body.solution;
+};
+
+test('entitlements: malformed or empty JSON gets one fixed 400 that never echoes the body or parser text, and writes nothing', async () => {
+  const solution = await syntheticSolution();
+  const rejected = [JSON.stringify({ solutionConfigId: solution.id }).slice(0, -1), `${marker} token=${secret}`, '', ' \n\t '];
+  const rejectAll = async stage => {
+    for (const body of rejected) {
+      assert.deepEqual(await sendEntitlementsBody(body), { status: 400, body: { error: 'request body must be valid JSON' } }, `${stage}: ${JSON.stringify(body.slice(0, 16))}`);
+    }
+  };
+
+  // Nothing is stored yet: a rejected body must not create the entitlement.
+  const empty = entitlementState();
+  await rejectAll('no entitlement stored');
+  assert.deepEqual(entitlementState(), empty, 'no entitlement created');
+
+  // A stored entitlement stays exactly as it was.
+  assert.equal((await call(entitlements.PUT, { solutionConfigId: solution.id })).status, 200);
+  const active = entitlementState();
+  assert.equal(active.entitlements.length, 1);
+  await rejectAll('entitlement stored');
+  assert.deepEqual(entitlementState(), active, 'the stored entitlement is unchanged');
+  assert.deepEqual(logs, [], 'client body errors are not logged, so no parser text or request content reaches a log');
+});
+
+test('entitlements: JSON null and other non-object bodies get the fixed solutionConfigId-required 400', async () => {
+  const solution = await syntheticSolution();
+  const before = entitlementState();
+  for (const body of ['null', '42', 'true', '"text"', '[]']) {
+    assert.deepEqual(await sendEntitlementsBody(body), { status: 400, body: { error: 'solutionConfigId is required' } }, body);
+  }
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+  assert.deepEqual(entitlementState(), before, 'nothing is activated');
+
+  // A valid request still activates the saved solution.
+  const activated = await sendEntitlementsBody(JSON.stringify({ solutionConfigId: solution.id }));
+  assert.equal(activated.status, 200);
+  assert.equal(activated.body.entitlement.solutionConfigId, solution.id);
+  assert.deepEqual(logs, []);
+});
+
+test('entitlements: body-read failures, even SyntaxError streams, are internal 500s with one allowlisted log and no write', async () => {
+  const solution = await syntheticSolution();
+  const before = entitlementState();
+  const validBody = JSON.stringify({ solutionConfigId: solution.id });
+  const consumed = new Request(entitlementsUrl, { method: 'PUT', body: validBody, headers: { 'content-type': 'application/json' } });
+  await consumed.text();
+  for (const [label, badRequest] of [
+    ['reading the body rejects with a generic error', failingBodyRead()],
+    ['the body stream fails with a generic error', new Request(entitlementsUrl, {
+      method: 'PUT',
+      headers: { 'content-type': 'application/json' },
+      duplex: 'half',
+      body: new ReadableStream({ start(controller) { controller.error(new Error(`synthetic stream failure on ${marker} token=${secret}`)); } }),
+    })],
+    ['the body was already consumed', consumed],
+    ['the body stream fails with a SyntaxError at the start', syntaxErrorStream(entitlementsUrl)],
+    ['the body stream fails with a SyntaxError after a partial valid body', syntaxErrorStream(entitlementsUrl, validBody.slice(0, -1))],
+  ]) {
+    const response = await entitlements.PUT(badRequest);
+    const result = { status: response.status, body: await response.json() };
+    assert.equal(result.status, 500, label);
+    assertSafe500(result, {
+      route: 'PUT /api/entitlements',
+      ids: [solution.id],
+      sqliteCodes: [],
+      extraForbidden: ['synthetic body read failure', 'synthetic stream failure', 'unusable', 'SyntaxError', 'valid JSON'],
+    });
+    assert.deepEqual(entitlementState(), before, `${label}: no entitlement write`);
+  }
+});

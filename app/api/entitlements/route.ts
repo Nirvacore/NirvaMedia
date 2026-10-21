@@ -35,7 +35,19 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const payload = (await request.json()) as { solutionConfigId?: string };
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as { solutionConfigId?: string };
     const solutionConfigId = payload.solutionConfigId?.trim() ?? "";
     if (!solutionConfigId) return Response.json({ error: "solutionConfigId is required" }, { status: 400 });
 
