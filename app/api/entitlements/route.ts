@@ -47,8 +47,9 @@ export async function PUT(request: Request) {
       throw error;
     }
     // JSON that is not an object, null included, has none of the required input.
-    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as { solutionConfigId?: string };
-    const solutionConfigId = payload.solutionConfigId?.trim() ?? "";
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as { solutionConfigId?: unknown };
+    // Only a string can name a solution; any other type is treated as a missing id.
+    const solutionConfigId = typeof payload.solutionConfigId === "string" ? payload.solutionConfigId.trim() : "";
     if (!solutionConfigId) return Response.json({ error: "solutionConfigId is required" }, { status: 400 });
 
     const db = getDb();

@@ -286,9 +286,15 @@ formats, limits, and errors.
   `request body must be valid JSON`, `null` gets the route's existing
   `solutionConfigId is required` 400, and neither case writes an
   entitlement or logs. A failure while reading its body still gets the
-  shared generic 500. `PATCH /api/posts/:id`, `POST /api/connections` and
-  `POST /api/solutions` still answer malformed JSON with the generic 500
-  and are the next candidates. Not merged or deployed.
+  shared generic 500. `POST /api/solutions` and `POST /api/connections`
+  follow the same rules, with `null` getting their existing
+  `name is required` and `a supported connectorId is required` 400s
+  respectively. A malformed, empty or null body saves no configuration,
+  account or event and logs nothing. `PATCH /api/posts/:id` follows the
+  same rules: `null` gets its existing `status or scheduledAt is required`
+  400, and a rejected body changes no post, job or audit event. No JSON
+  body route still parses its body with `request.json()`.
+  Not merged or deployed.
 
 - 2026-09-15: Preserved the dated 2026-08-19 Phase 0 audit and its pinned
   source evidence alongside the later canonical-content guardrails below.

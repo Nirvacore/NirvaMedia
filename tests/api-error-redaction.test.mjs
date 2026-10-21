@@ -1180,3 +1180,366 @@ test('entitlements: body-read failures, even SyntaxError streams, are internal 5
     assert.deepEqual(entitlementState(), before, `${label}: no entitlement write`);
   }
 });
+
+// POST /api/solutions: synthetic configurations only, no account, OAuth or
+// publishing. Malformed or empty JSON is the caller's error: one fixed 400, no
+// log and no configuration write. JSON that is not an object, null included,
+// gets the route's existing name-required 400. Any failure to read the body
+// stays internal.
+const solutionsUrl = 'https://example.test/api/solutions';
+const solutionName = 'Synthetic private solution';
+const solutionBody = JSON.stringify({ name: solutionName, moduleIds: ['content-studio'], connectorIds: ['meta-network'] });
+const sendSolutionsBody = async body => {
+  const response = await solutions.POST(new Request(solutionsUrl, { method: 'POST', body, headers: { 'content-type': 'application/json' } }));
+  return { status: response.status, body: await response.json() };
+};
+const solutionRows = () => runtime.sqlite.prepare('SELECT * FROM solution_configs ORDER BY id').all().map(row => ({ ...row }));
+
+test('solutions: malformed or empty JSON gets one fixed 400 that never echoes the body or parser text, and writes nothing', async () => {
+  const rejected = [solutionBody.slice(0, -1), `${marker} token=${secret}`, '', ' \n\t '];
+  const rejectAll = async stage => {
+    for (const body of rejected) {
+      assert.deepEqual(await sendSolutionsBody(body), { status: 400, body: { error: 'request body must be valid JSON' } }, `${stage}: ${JSON.stringify(body.slice(0, 16))}`);
+    }
+  };
+
+  // Nothing is stored yet: a rejected body must not create a configuration.
+  await rejectAll('no configuration stored');
+  assert.deepEqual(solutionRows(), [], 'no configuration created');
+
+  // A stored configuration stays exactly as it was.
+  assert.equal((await sendSolutionsBody(solutionBody)).status, 201);
+  const stored = solutionRows();
+  assert.equal(stored.length, 1);
+  await rejectAll('configuration stored');
+  assert.deepEqual(solutionRows(), stored, 'the stored configuration is unchanged');
+  assert.deepEqual(logs, [], 'client body errors are not logged, so no parser text or request content reaches a log');
+});
+
+test('solutions: JSON null and other non-object bodies get the existing name-required 400', async () => {
+  for (const body of ['null', '42', 'true', '"text"', '[]']) {
+    assert.deepEqual(await sendSolutionsBody(body), { status: 400, body: { error: 'name is required' } }, body);
+  }
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+  assert.deepEqual(solutionRows(), [], 'no configuration created');
+
+  // A valid request still saves the configuration.
+  const saved = await sendSolutionsBody(solutionBody);
+  assert.equal(saved.status, 201);
+  assert.equal(saved.body.solution.name, solutionName);
+  assert.deepEqual(saved.body.solution.moduleIds, ['content-studio']);
+  assert.deepEqual(solutionRows().map(row => row.id), [saved.body.solution.id]);
+  assert.deepEqual(logs, []);
+});
+
+test('solutions: body-read failures, even SyntaxError streams, are internal 500s with one allowlisted log and no write', async () => {
+  const consumed = new Request(solutionsUrl, { method: 'POST', body: solutionBody, headers: { 'content-type': 'application/json' } });
+  await consumed.text();
+  for (const [label, badRequest] of [
+    ['reading the body rejects with a generic error', failingBodyRead()],
+    ['the body stream fails with a generic error', new Request(solutionsUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      duplex: 'half',
+      body: new ReadableStream({ start(controller) { controller.error(new Error(`synthetic stream failure on ${marker} token=${secret}`)); } }),
+    })],
+    ['the body was already consumed', consumed],
+    ['the body stream fails with a SyntaxError at the start', syntaxErrorStream(solutionsUrl)],
+    ['the body stream fails with a SyntaxError after a partial valid body', syntaxErrorStream(solutionsUrl, solutionBody.slice(0, -1))],
+  ]) {
+    const response = await solutions.POST(badRequest);
+    const result = { status: response.status, body: await response.json() };
+    assert.equal(result.status, 500, label);
+    assertSafe500(result, {
+      route: 'POST /api/solutions',
+      sqliteCodes: [],
+      extraForbidden: [solutionName, 'synthetic body read failure', 'synthetic stream failure', 'unusable', 'SyntaxError', 'valid JSON'],
+    });
+    assert.deepEqual(solutionRows(), [], `${label}: no configuration written`);
+  }
+});
+
+// POST /api/connections: connector setup records only; no account is connected,
+// no OAuth runs and no credential is accepted. Malformed or empty JSON is the
+// caller's error: one fixed 400, no log and no account or event write. JSON
+// that is not an object, null included, gets the route's existing
+// supported-connectorId 400. Any failure to read the body stays internal.
+const connectionsUrl = 'https://example.test/api/connections';
+const connectionBody = JSON.stringify(setupRequest);
+const sendConnectionsBody = async body => {
+  const response = await connections.POST(new Request(connectionsUrl, { method: 'POST', body, headers: { 'content-type': 'application/json' } }));
+  return { status: response.status, body: await response.json() };
+};
+
+test('connections: malformed or empty JSON gets one fixed 400 that never echoes the body or parser text, and writes nothing', async () => {
+  const rejected = [
+    connectionBody.slice(0, -1),
+    JSON.stringify({ connectorId: 'meta-network', accessToken: secret }).slice(0, -1),
+    `${marker} token=${secret}`,
+    '',
+    ' \n\t ',
+  ];
+  const rejectAll = async stage => {
+    for (const body of rejected) {
+      assert.deepEqual(await sendConnectionsBody(body), { status: 400, body: { error: 'request body must be valid JSON' } }, `${stage}: ${JSON.stringify(body.slice(0, 16))}`);
+    }
+  };
+
+  // Nothing is stored yet: a rejected body must not create a setup record.
+  await rejectAll('no setup stored');
+  assert.deepEqual(connectorRows(), { accounts: [], events: [] }, 'no account or event created');
+
+  // A stored setup record and its events stay exactly as they were.
+  assert.equal((await sendConnectionsBody(connectionBody)).status, 201);
+  const stored = connectorRows();
+  assert.equal(stored.accounts.length, 1);
+  await rejectAll('setup stored');
+  assert.deepEqual(connectorRows(), stored, 'the stored setup record and its events are unchanged');
+  assert.deepEqual(logs, [], 'client body errors are not logged, so no parser text or request content reaches a log');
+});
+
+test('connections: JSON null and other non-object bodies get the existing supported-connectorId 400', async () => {
+  for (const body of ['null', '42', 'true', '"text"', '[]']) {
+    assert.deepEqual(await sendConnectionsBody(body), { status: 400, body: { error: 'a supported connectorId is required' } }, body);
+  }
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+  assert.deepEqual(connectorRows(), { accounts: [], events: [] }, 'no account or event created');
+
+  // Valid setup and restart requests still work.
+  const created = await sendConnectionsBody(connectionBody);
+  assert.equal(created.status, 201);
+  assert.equal(created.body.account.status, 'setup_required');
+  const restarted = await sendConnectionsBody(JSON.stringify({ connectorId: 'meta-network' }));
+  assert.equal(restarted.status, 200);
+  assert.equal(restarted.body.account.id, created.body.account.id);
+  assert.deepEqual(logs, []);
+});
+
+test('connections: body-read failures, even SyntaxError streams, are internal 500s with one allowlisted log and no write', async () => {
+  const consumed = new Request(connectionsUrl, { method: 'POST', body: connectionBody, headers: { 'content-type': 'application/json' } });
+  await consumed.text();
+  for (const [label, badRequest] of [
+    ['reading the body rejects with a generic error', failingBodyRead()],
+    ['the body stream fails with a generic error', new Request(connectionsUrl, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      duplex: 'half',
+      body: new ReadableStream({ start(controller) { controller.error(new Error(`synthetic stream failure on ${marker} token=${secret}`)); } }),
+    })],
+    ['the body was already consumed', consumed],
+    ['the body stream fails with a SyntaxError at the start', syntaxErrorStream(connectionsUrl)],
+    ['the body stream fails with a SyntaxError after a partial valid body', syntaxErrorStream(connectionsUrl, connectionBody.slice(0, -1))],
+  ]) {
+    const response = await connections.POST(badRequest);
+    const result = { status: response.status, body: await response.json() };
+    assert.equal(result.status, 500, label);
+    assertSafe500(result, {
+      route: 'POST /api/connections',
+      sqliteCodes: [],
+      extraForbidden: [...connectionForbidden, 'synthetic body read failure', 'synthetic stream failure', 'unusable', 'SyntaxError', 'valid JSON'],
+    });
+    assert.deepEqual(connectorRows(), { accounts: [], events: [] }, `${label}: no account or event written`);
+  }
+});
+
+// PATCH /api/posts/:id: synthetic posts only, no account, OAuth or publishing.
+// Malformed or empty JSON is the caller's error: one fixed 400, no log and no
+// post, job or audit write. JSON that is not an object, null included, gets
+// the route's existing status-or-scheduledAt-required 400. Any failure to read
+// the body stays internal.
+const patchUrl = id => `https://example.test/api/posts/${id}`;
+const patchBody = JSON.stringify({ status: 'archived' });
+const sendPatchBody = async (id, body) => {
+  const response = await posts.PATCH(new Request(patchUrl(id), { method: 'PATCH', body, headers: { 'content-type': 'application/json' } }), context(id));
+  return { status: response.status, body: await response.json() };
+};
+const queueSnapshot = () => ({
+  posts: runtime.sqlite.prepare('SELECT * FROM campaign_posts ORDER BY id').all().map(row => ({ ...row })),
+  jobs: runtime.sqlite.prepare('SELECT * FROM publish_jobs ORDER BY id').all().map(row => ({ ...row })),
+  events: runtime.sqlite.prepare('SELECT * FROM connector_events ORDER BY id').all().map(row => ({ ...row })),
+});
+// One queued post (it has a publish job and an audit event) and one approved
+// post that the valid archive request in patchBody could really change.
+async function queuedAndApproved() {
+  const { post: queued } = await scheduledPost();
+  const approved = await approvedPost();
+  const snapshot = queueSnapshot();
+  assert.equal(snapshot.jobs.length, 1, 'the queued post has its publish job');
+  assert.ok(snapshot.events.length > 0, 'the queued post has its audit event');
+  return { queued, approved, snapshot };
+}
+
+test('posts: malformed or empty JSON gets one fixed 400 that never echoes the body or parser text, and changes nothing', async () => {
+  const { queued, approved, snapshot } = await queuedAndApproved();
+  // The first body is a valid archive request cut off one character short.
+  for (const body of [patchBody.slice(0, -1), `${marker} token=${secret}`, '', ' \n\t ']) {
+    for (const id of [approved.id, queued.id]) {
+      assert.deepEqual(await sendPatchBody(id, body), { status: 400, body: { error: 'request body must be valid JSON' } }, `${JSON.stringify(body.slice(0, 16))} for ${id === approved.id ? 'the approved post' : 'the queued post'}`);
+    }
+  }
+  assert.deepEqual(logs, [], 'client body errors are not logged, so no parser text or request content reaches a log');
+  assert.deepEqual(queueSnapshot(), snapshot, 'no post, job or audit event changed');
+});
+
+test('posts: JSON null and other non-object bodies get the existing status-or-scheduledAt required 400', async () => {
+  const { queued, approved, snapshot } = await queuedAndApproved();
+  for (const body of ['null', '42', 'true', '"text"', '[]']) {
+    for (const id of [approved.id, queued.id]) {
+      assert.deepEqual(await sendPatchBody(id, body), { status: 400, body: { error: 'status or scheduledAt is required' } }, body);
+    }
+  }
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+  assert.deepEqual(queueSnapshot(), snapshot, 'no post, job or audit event changed');
+
+  // A valid request still applies its transition, with the unchanged response shape.
+  const archived = await sendPatchBody(approved.id, patchBody);
+  assert.equal(archived.status, 200);
+  assert.deepEqual(Object.keys(archived.body), ['post', 'continuity']);
+  assert.equal(archived.body.post.status, 'archived');
+  assert.deepEqual(archived.body.continuity, { source: 'claude-upstream-status-flow' });
+  assert.deepEqual(logs, []);
+});
+
+test('posts: body-read failures, even SyntaxError streams, are internal 500s with one allowlisted log and no change', async () => {
+  const { queued, approved, snapshot } = await queuedAndApproved();
+  const url = patchUrl(approved.id);
+  const consumed = new Request(url, { method: 'PATCH', body: patchBody, headers: { 'content-type': 'application/json' } });
+  await consumed.text();
+  for (const [label, badRequest] of [
+    ['reading the body rejects with a generic error', failingBodyRead()],
+    ['the body stream fails with a generic error', new Request(url, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      duplex: 'half',
+      body: new ReadableStream({ start(controller) { controller.error(new Error(`synthetic stream failure on ${marker} token=${secret}`)); } }),
+    })],
+    ['the body was already consumed', consumed],
+    ['the body stream fails with a SyntaxError at the start', syntaxErrorStream(url)],
+    ['the body stream fails with a SyntaxError after a partial valid body', syntaxErrorStream(url, patchBody.slice(0, -1))],
+  ]) {
+    const response = await posts.PATCH(badRequest, context(approved.id));
+    const result = { status: response.status, body: await response.json() };
+    assert.equal(result.status, 500, label);
+    assertSafe500(result, {
+      route: 'PATCH /api/posts/:id',
+      ids: [approved.id, queued.id],
+      sqliteCodes: [],
+      extraForbidden: ['synthetic body read failure', 'synthetic stream failure', 'unusable', 'SyntaxError', 'valid JSON'],
+    });
+    assert.deepEqual(queueSnapshot(), snapshot, `${label}: no post, job or audit event changed`);
+  }
+});
+
+// PUT /api/entitlements solutionConfigId types. Only a string can name a
+// solution, so any other type is treated like a missing id: the fixed required
+// 400, with no echo, no log and no entitlement write. Synthetic solutions only.
+test('entitlements: a wrong-typed solutionConfigId gets the fixed required 400 with no echo, log or write', async () => {
+  const solution = await syntheticSolution();
+  const wrongTyped = [
+    5, 0, -1.5, true, false,
+    [], [solution.id], [[solution.id]], [marker],
+    {}, { id: solution.id }, { solutionConfigId: solution.id }, { value: marker },
+  ];
+  const rejectAll = async stage => {
+    for (const value of wrongTyped) {
+      assert.deepEqual(await call(entitlements.PUT, { solutionConfigId: value }), { status: 400, body: { error: 'solutionConfigId is required' } }, `${stage}: ${JSON.stringify(value)}`);
+    }
+  };
+
+  // Nothing is stored yet: a rejected id must not create the entitlement.
+  const empty = entitlementState();
+  await rejectAll('no entitlement stored');
+  assert.deepEqual(entitlementState(), empty, 'no entitlement created');
+
+  // A stored entitlement stays as it was, and no array or object is coerced into an id.
+  assert.equal((await call(entitlements.PUT, { solutionConfigId: solution.id })).status, 200);
+  const active = entitlementState();
+  await rejectAll('entitlement stored');
+  assert.deepEqual(entitlementState(), active, 'the stored entitlement is unchanged');
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+});
+
+test('entitlements: missing, null, blank and unknown ids keep their answers, and a padded valid id still activates', async () => {
+  const solution = await syntheticSolution();
+  const before = entitlementState();
+  for (const body of [{}, { solutionConfigId: null }, { solutionConfigId: '' }, { solutionConfigId: '   ' }, { solutionConfigId: '\t\n' }]) {
+    assert.deepEqual(await call(entitlements.PUT, body), { status: 400, body: { error: 'solutionConfigId is required' } }, JSON.stringify(body));
+  }
+  for (const solutionConfigId of ['absent', '  absent  ', marker]) {
+    assert.deepEqual(await call(entitlements.PUT, { solutionConfigId }), { status: 404, body: { error: 'solution not found' } }, solutionConfigId);
+  }
+  assert.deepEqual(logs, [], 'validation and not-found answers are not logged');
+  assert.deepEqual(entitlementState(), before, 'nothing is activated');
+
+  // A padded valid id is trimmed and activates the saved solution.
+  const activated = await call(entitlements.PUT, { solutionConfigId: `  ${solution.id}  ` });
+  assert.equal(activated.status, 200);
+  assert.equal(activated.body.entitlement.solutionConfigId, solution.id);
+  assert.equal(activated.body.entitlement.status, 'active');
+  assert.equal((await (await entitlements.GET()).json()).entitlement.solutionConfigId, solution.id);
+  assert.deepEqual(logs, []);
+});
+
+// POST /api/solutions name types. Only a string can be a name, so any other
+// type is treated like a missing name: the fixed name-required 400, with no
+// echo, no log and no configuration write. Synthetic configurations only.
+test('solutions: a wrong-typed name gets the fixed name-required 400 with no echo, log or write', async () => {
+  const wrongTyped = [
+    5, 0, -1.5, true, false,
+    [], ['Synthetic'], [['Synthetic']], [marker],
+    {}, { value: marker }, { name: 'Synthetic' },
+  ];
+  const rejectAll = async stage => {
+    for (const name of wrongTyped) {
+      assert.deepEqual(await call(solutions.POST, { name, moduleIds: ['content-studio'], connectorIds: ['meta-network'] }), { status: 400, body: { error: 'name is required' } }, `${stage}: ${JSON.stringify(name)}`);
+    }
+    // The name is checked before the module count, so a missing module list does not change the answer.
+    assert.deepEqual(await call(solutions.POST, { name: 5 }), { status: 400, body: { error: 'name is required' } }, `${stage}: wrong-typed name without modules`);
+    assert.deepEqual(await call(solutions.POST, { name: 5, moduleIds: 5, connectorIds: ['meta-network'] }), { status: 400, body: { error: 'name is required' } }, `${stage}: wrong-typed name and modules`);
+    assert.deepEqual(await call(solutions.POST, { name: 5, moduleIds: ['content-studio'], connectorIds: true }), { status: 400, body: { error: 'name is required' } }, `${stage}: wrong-typed name and connectors`);
+  };
+
+  // Nothing is stored yet: a rejected name must not create a configuration.
+  await rejectAll('no configuration stored');
+  assert.deepEqual(solutionRows(), [], 'no configuration created');
+
+  // A stored configuration stays exactly as it was.
+  assert.equal((await sendSolutionsBody(solutionBody)).status, 201);
+  const stored = solutionRows();
+  assert.equal(stored.length, 1);
+  await rejectAll('configuration stored');
+  assert.deepEqual(solutionRows(), stored, 'the stored configuration is unchanged');
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+});
+
+test('solutions: missing, null and blank names keep their answers, and a padded valid name is trimmed and saved', async () => {
+  const moduleIds = ['content-studio'];
+  for (const body of [{ moduleIds }, { name: null, moduleIds }, { name: '', moduleIds }, { name: '   ', moduleIds }, { name: '\t\n', moduleIds }]) {
+    assert.deepEqual(await call(solutions.POST, body), { status: 400, body: { error: 'name is required' } }, JSON.stringify(body));
+  }
+  // The module checks are unchanged and still run after the name check.
+  for (const body of [{ name: 'Synthetic valid name' }, { name: 'Synthetic valid name', moduleIds: [] }, { name: 'Synthetic valid name', moduleIds: ['not-a-module'] }]) {
+    assert.deepEqual(await call(solutions.POST, body), { status: 400, body: { error: 'at least one module is required' } }, JSON.stringify(body));
+  }
+  assert.deepEqual(logs, [], 'validation answers are not logged');
+  assert.deepEqual(solutionRows(), [], 'nothing is saved');
+
+  // A padded valid name is trimmed; unknown modules, connectors and bundle are filtered as before.
+  const saved = await call(solutions.POST, {
+    name: '  Synthetic padded solution  ', bundleId: 'not-a-bundle',
+    moduleIds: ['content-studio', 'content-studio', 'not-a-module'], connectorIds: ['meta-network', 'not-a-connector'],
+  });
+  assert.equal(saved.status, 201);
+  assert.deepEqual(Object.keys(saved.body), ['solution']);
+  assert.deepEqual(Object.keys(saved.body.solution), ['id', 'name', 'bundleId', 'moduleIds', 'connectorIds', 'status', 'createdAt', 'updatedAt']);
+  assert.equal(saved.body.solution.name, 'Synthetic padded solution');
+  assert.equal(saved.body.solution.bundleId, null);
+  assert.deepEqual(saved.body.solution.moduleIds, ['content-studio']);
+  assert.deepEqual(saved.body.solution.connectorIds, ['meta-network']);
+  assert.equal(saved.body.solution.status, 'saved');
+  const bundled = await call(solutions.POST, { name: 'Synthetic bundle solution', bundleId: 'growth', moduleIds });
+  assert.equal(bundled.status, 201);
+  assert.equal(bundled.body.solution.bundleId, 'growth', 'a known bundle id is kept');
+  assert.deepEqual(solutionRows().map(row => row.name).sort(), ['Synthetic bundle solution', 'Synthetic padded solution']);
+  assert.deepEqual(logs, []);
+});

@@ -17,18 +17,32 @@ export async function GET() {
 }
 export async function POST(request: Request) {
   try {
-    const payload = (await request.json()) as {
-      name?: string;
+    // Read the body first and parse it second: a failure while reading is
+    // internal whatever error type the stream reports (the 500 below), and
+    // only a syntax error in the bytes the client sent is malformed JSON.
+    const bodyText = await request.text();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(bodyText);
+    } catch (error) {
+      if (error instanceof SyntaxError) return Response.json({ error: "request body must be valid JSON" }, { status: 400 });
+      throw error;
+    }
+    // JSON that is not an object, null included, has none of the required input.
+    const payload = (parsed !== null && typeof parsed === "object" ? parsed : {}) as {
+      name?: unknown;
       bundleId?: string | null;
       moduleIds?: string[];
       connectorIds?: string[];
     };
-    const name = payload.name?.trim() ?? "";
+    // Only a string can be a name; any other type is treated as a missing name.
+    const name = typeof payload.name === "string" ? payload.name.trim() : "";
+    if (!name) return Response.json({ error: "name is required" }, { status: 400 });
+
     const selectedModules = Array.from(new Set(payload.moduleIds ?? [])).filter((id) => moduleIds.has(id));
     const selectedConnectors = Array.from(new Set(payload.connectorIds ?? [])).filter((id) => connectorIds.has(id));
     const bundleId = productBundles.some((bundle) => bundle.id === payload.bundleId) ? payload.bundleId! : null;
 
-    if (!name) return Response.json({ error: "name is required" }, { status: 400 });
     if (!selectedModules.length) return Response.json({ error: "at least one module is required" }, { status: 400 });
 
     const now = new Date();
